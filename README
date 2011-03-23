@@ -1,0 +1,71 @@
+Welcome to Budget Tracker
+
+Summary: Tracks Bills, Income and lets you know how much money you have
+at any point in time.
+
+This product is a website that uses nodejs as a server, a browser as the
+client and mongodb to store the data. This project was started as a means to help me teach myself about these three technologies. As I was very sick when the project started it is likely that things will suck.
+
+This is also a way I can get started using git and github.
+
+User Requirements:
+ * The user is typically a single user or a couple who want to keep track of simple day to day expenses such as mortgage, bills, expenses and have a regular income.
+
+ 1. To know how much money the user will have at any point in time.
+ 2. To know when bills will come up and need to be paid.
+ 3. To be able to make judgements about savings involving interest.
+ 
+Technical:
+The user will be asked to enter:
+* Their current bank and cash balances
+* Their bills with the following details:
+   * Amount
+   * Due date
+   * Frequences (Every week, fortnight, 4 weeks, month, quarter, half or year)
+   * When (and if) the bill will 'dry up' or not need to be paid again.
+* Their income with the about details.
+* The interest rate on their credit card and how fees are calculated.
+
+Income and expenses will have Keywords associated with them. Each keyword can belong to a parent keyword. This is designed to be flexible to allow for searching and hierarchical sorting. Consider for example the following bills:
+
+Water {
+   Utility <- Bill <- Expense
+   Crucial
+   Variable
+   Quarterly
+}
+
+Tim's Mobile {
+   Bill <- Expense
+   Tim
+   Important
+   Monthly
+}
+
+Petrol {
+   Living <- Expense
+   Gemma
+}
+
+Food Shopping {
+   Living <- Expense
+   Important
+}
+
+The user gets to decide which keywords are associated with each income or expense. They can also decide if one keyword is a parent of another.
+
+Sometimes an expense or income will have additional keywords that will apply as a one off. Some keywords need to be overridden. Events can be introduced as keywords.
+
+Food Shopping instance xxx {
+   Dinner Party
+   Trivial 
+   not Important
+}
+
+
+Usability:
+The product will make high use of javascript, ajax and json to make it fast and to allow the user to see changes instantly and mostly everything on the same page.
+
+
+Notes:
+This product will use a build and see methodology to encountering and addressing issues that arise. Any point of the specification may change at any time.
