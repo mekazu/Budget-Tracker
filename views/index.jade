@@ -1,0 +1,70 @@
+h2 Budget-Tracker
+.box
+	dt
+		h3 Bank balance
+	dd
+		form#bank
+			table
+				tbody#bank-details
+					tr
+						td.label Name:
+						td
+							input(name="name")
+							input(name="key", value="new", type="hidden")
+							input(name="action", value="add", type="hidden")
+					tr
+						td.label Balance:
+						td
+							input(name="balance")
+					tr
+						td.final(colspan="2")
+							input(type="submit", value="Save")
+		- if (bank.length)
+			table
+				thead
+					tr
+						th Name
+						th Balance
+				tbody#browse-bank-details
+					- bank.forEach(function(account) {
+					tr
+						td(name="name")= account.name
+						td(name="balance")= account.balance
+						td.change Change
+						td.delete Delete
+					- })
+
+.box
+	dl
+		dt
+			h3 Income and Expenses
+		dd
+			form#expense
+			table
+				tbody
+					tr
+						td Type?
+						td
+							select
+								option(value="expense")
+									| Expense
+								option(value="income")
+									| Income
+					tr
+						td Title
+						td
+							input(name="title")
+							input(name="action", value="add", type="hidden")
+					tr
+						td Amount
+						td
+							input(name="amount")
+					tr
+						td Frequency
+						td
+							select
+								option(value="once-off")
+									| Once Off
+								option(value="weekdays")
+									| Weekdays
+
