@@ -1,44 +1,44 @@
 $(document).ready ->
-	$("#more").click ->
-		tbody = $("tbody#bank-details");
-		tr = tbody.children().last().clone(true).appendTo(tbody)
-		tr.find("input").attr("value", "")
-		tr.find(".less").show()
-
-	$(".less").click ->
-		# removes this > td > tr
-		$(this).parent().parent().remove()
-
 	$("#bank").submit ->
 		balance = $(this).find(":input").serializeArray();
 		log balance, "all data"
-		$.post "/balance", balance, (result) ->
-			alert(result);
+		$.post "/balance", balance, (err) ->
+			if err && err != ''
+				alert err
+			else
+				window.location.href = window.location.href
 		false
 
 	$(".change").click ->
-		tds = $(this).parent().children()
-		inputs = $(":input", "#bank")
-		tds.each (i, td) ->
-			name = $(td).attr("name")
-			value = $(td).text();
-			if name
-				log "Name: " + name + ", Value: " + value
-				inputs.each (j, input) ->
-					inputName = $(input).attr("name")
-					if inputName == "action"
-						$(input).attr("value", "change")
-					if inputName == name
-						$(input).attr("value", value)
+		data = {}
+		data.action = "change"
+		data.submit = "Update"
+		copyDataToAction data, this
 
+	$(".delete").click ->
+		data = {}
+		data.action = "delete"
+		data.submit = "Delete"
+		copyDataToAction data, this
+
+	copyDataToAction = (data, clicked) ->
+		mapHidden(data, $(clicked).parent().parent().children().last().children())
+		mergeAttributes(data, $(":input", "#bank"))
 	this
-showValues = ->
-	fields = $("#bank :input").serializeArray()
-	log(fields)
-	$("#results").empty()
-	$.each fields, (i, field) ->
-		$("#results").append(field.value + " ")
 
+mapHidden = (data, hidden) ->
+	hidden.each (i, input) ->
+		if name = $(input).attr("name")
+			if !data[name]
+				data[name] = $(input).attr("value")
+
+mergeAttributes = (from, inputs) ->
+	log from, "Merging"
+	inputs.each (i, input) ->
+		for key, value of from
+			if $(input).attr("name") == key
+				log "Merging key: " + key + ", value: " + value
+				$(input).attr("value", value)
 
 log = (text, note) ->
 	if console && console.log

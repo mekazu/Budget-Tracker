@@ -4,34 +4,41 @@ h2 Budget-Tracker
 		h3 Bank balance
 	dd
 		form#bank
-			table
-				tbody#bank-details
+			table.bank.action
+				tbody
 					tr
 						td.label Name:
 						td
 							input(name="name")
-							input(name="key", value="new", type="hidden")
-							input(name="action", value="add", type="hidden")
+							input(type="hidden", name="origin", value="")
+							input(type="hidden", name="action", value="add")
 					tr
 						td.label Balance:
 						td
 							input(name="balance")
 					tr
 						td.final(colspan="2")
-							input(type="submit", value="Save")
+							input(name="submit", type="submit", value="Save")
 		- if (bank.length)
-			table
+			table.bank.browse
 				thead
 					tr
 						th Name
 						th Balance
-				tbody#browse-bank-details
+				tbody
 					- bank.forEach(function(account) {
 					tr
-						td(name="name")= account.name
-						td(name="balance")= account.balance
-						td.change Change
-						td.delete Delete
+						td= account.name
+						td.numeric= account.balance
+						td 
+							button.change Change
+						td
+							button.delete Delete
+							input(type="hidden", name="name",    value: account.name)
+							input(type="hidden", name="origin",  value: account.name)
+							input(type="hidden", name="action",  value="")
+							input(type="hidden", name="balance", value: account.balance)
+							input(type="hidden", name="id",      value: account._id)
 					- })
 
 .box

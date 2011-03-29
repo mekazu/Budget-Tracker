@@ -66,6 +66,26 @@ Food Shopping instance xxx {
 Usability:
 The product will make high use of javascript, ajax and json to make it fast and to allow the user to see changes instantly and mostly everything on the same page.
 
+At first there will be no entries for a new user so we need an
+Add Browse Change Delete (ABCD) mechanism for
+  * bank balances
+  * income and expenses
+  * keywords
+
+The ABCD mechanism will work like this.
+Add:
+A blank 'row' for new entries. A row is defined as having a key and values
+A save button which when clicked will send the data to the server to be saved
+If the saved data is valid then the row is transformed into a Browse row
+
+Browse:
+The user will be able to see all rows. When a use clicks on the row it will transform into a details view and will look different perhaps taking on a new layer similar to viewing events in iCal. Perhaps there can be an option to see more details without being in edit mode.
+
+Change:
+The edit mode may vary slightly from the view mode of a row. If the saved data is valid then we return to the browse view, else the user is notified and may choose to cancel changes.
+
+Delete:
+The user may get an "are you sure?" if it has dependant rows. Delete is available from the browse and view screens.
 
 Notes:
 This product will use a build and see methodology to encountering and addressing issues that arise. Any point of the specification may change at any time.

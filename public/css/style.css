@@ -1,11 +1,11 @@
 body {
   color: black;
-  background-color: #303E7E;
+  background-color: #4C5685;
   font-family: sans-serif;
 }
 
 div.body {
-  background-color: #6573B2;
+  background-color: #4E5B98;
   color: white;
   margin: 0 auto;
   padding: 3px 15px 15px 15px;
@@ -14,14 +14,41 @@ div.body {
 }
 
 div.box {
-  background-color: white;
-  color: black;
+  background-color: #6573B2;
+  color: white;
   border-style: solid;
   border-width: 3px;
   border-color: white;
   border-radius: 5px;
   padding: 0 20px 20px 20px;
-  margin: 25px 0 0 0;
+  margin: 15px 0 0 0;
+}
+
+table.action {
+  background-color: white;
+  color: black;
+  border-style: solid;
+  border-width: 3px;
+  border-color: #4E5B98;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 15px 0 0 0;
+}
+
+table.browse {
+  background-color: white;
+  color: black;
+  border-style: solid;
+  border-width: 3px;
+  border-color: #4E5B98;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 15px 0 0 0;
+}
+
+
+.numeric {
+	text-align: right;
 }
 
 div.action {
