@@ -5,7 +5,6 @@ MongoObjectID= require('mongodb').ObjectID
 MongoServer= require('mongodb').Server
 sys = require('sys')
 
-
 database = (host, port, database) ->
 	this.db= new MongoDb(database, new MongoServer(host, port, {auto_reconnect: true}, {}))
 	this.db.open ->
@@ -29,11 +28,13 @@ app.get '/', (req, res) ->
 app.post "/balance", (req, res) ->
 	p = req.body
 	look p, "Inspecting"
-	defineKey p, 'name'
+	p.key = name : if p.origin then p.origin else p.name
+	look p.key, "Key definition:" 
+	delete p.origin
 	action = p.action
 	delete p.action
 	persist req.body, MONEY, action, (err, docs) ->
-		res.send(if err then "Error: " + err else "Success: " + action)
+		res.send(if err then "Error: " + err else '')
 app.listen(8743)
 
 list = (key, table, callback) ->
@@ -57,13 +58,20 @@ persist = (row, table, action, callback) ->
 	db.collection table, (err, c) ->
 		if action == 'add'
 			c.count key, (err, count) ->
-				if count > 0
-					callback("Duplicate key on insert", null)
-				else
+				if count < 1
 					c.insert [row], final
+				else
+					callback("Found " + count + " duplicate key on insert", null)
 		else if action == 'change'
 			c.findOne key, (err, doc) ->
 				if look doc, "Before Update:"
+					row._id = doc._id
+					c.update key, row, {safe: true}, final
+				else
+					callback("Could not find the doc to update", null);
+		else if action == 'replace'
+			c.findOne key, (err, doc) ->
+				if look doc, "Before Replace:"
 					row._id = doc._id
 					c.update key, row, {safe: true}, final
 				else
@@ -75,11 +83,6 @@ persist = (row, table, action, callback) ->
 				else
 					callback("Could not find the doc to delete", null);
 
-
-defineKey = (params, attribute) ->
-	params.key = new Object
-	params.key[attribute] = params[attribute]
-	look params.key, "Key definition"
 
 log = (text, note) ->
 	log note if note
