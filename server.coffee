@@ -20,25 +20,79 @@ app.configure ->
 
 indexCount = 0;
 app.get '/', (req, res) ->
-	debugger
+	locals = {}
+	totals = {}
 	log("Loaded Index: " + indexCount++);
-	list {}, MONEY, (results) ->
-		res.render 'index.jade', {title: "Home", locals: {bank: results}}
+	list {group: 'bank'}, MONEY, (results) ->
+		locals.bank = results
+		list {group: 'expense'}, MONEY, (results) ->
+			locals.expenses = results
+			defineTotals locals
+			res.render 'index.jade', {title: "Home", locals: look locals, "Locals:"}
 
 app.post "/balance", (req, res) ->
 	p = req.body
-	look p, "Inspecting"
-	p.key = name : if p.origin then p.origin else p.name
-	look p.key, "Key definition:" 
-	delete p.origin
-	action = p.action
-	delete p.action
-	persist req.body, MONEY, action, (err, docs) ->
-		res.send(if err then "Error: " + err else '')
+	look p, "The form sent to balance:"
+	# Here we tie up origin as being the original key, otherwise it's just name
+	origin = dislodge p, 'origin'
+	look (p.key = name : if origin then origin else p.name), "Key definition:"
+	action = dislodge p, 'action'
+	validate req.body, MONEY, action, (err, row) ->
+		if err
+			res.send("Validation Error: " + err)
+		else
+			persist row, MONEY, action, (err, docs) ->
+				log "Responding"
+				res.send(if err then "Error: " + err else '')
+
 app.listen(8743)
 
+validate = (row, table, action, callback) ->
+	if table == MONEY
+		if row.group == 'expense'
+			if action != 'delete'
+				amount = parseFloat(row.amount)
+				if isNaN(amount)
+					callback "Amount is not numeric"
+				row.amount = amount
+	callback false, row
+
+defineTotals = (locals) ->
+	bank =
+		name: 'Bank Balance',
+		amount: sum locals.bank, 'balance'
+	expense =
+		name: 'Expenses Balance',
+		amount: sum locals.expenses, 'amount', 'type', 'expense'
+	total =
+		name: 'Total Balance',
+		amount: bank.amount + expense.amount
+	locals.totals = [bank, expense, total]
+
+sum = (list, p, negKey, negVal) ->
+	balance = 0
+	for obj in list
+		amount = parseFloat(obj[p])
+		if !isNaN(amount)
+			if negKey and negVal and obj[negKey] == negVal
+				balance -= amount
+			else
+				balance += amount
+	balance
+
+filter = (results, key, value) ->
+	list = []
+	for result in results
+		list.push result if result[key] == value
+	list
+
+dislodge = (obj, property) ->
+	value = obj[property]
+	delete obj[property]
+	log value, "Dislodged: "
+
 list = (key, table, callback) ->
-	look key, "Looking in: " + table + " for: "
+	look key, "Looking in " + table + " for: "
 	db.collection table, (err, c) ->
 		look err, "Error:" if err
 		c.find key, (err, cursor) ->
@@ -82,7 +136,8 @@ persist = (row, table, action, callback) ->
 					c.remove doc, {safe: true}, final
 				else
 					callback("Could not find the doc to delete", null);
-
+		else
+			callback("Action: " + action + " not understood.");
 
 log = (text, note) ->
 	log note if note

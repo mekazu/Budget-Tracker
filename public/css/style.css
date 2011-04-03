@@ -1,60 +1,75 @@
 body {
-  color: black;
-  background-color: #4C5685;
-  font-family: sans-serif;
+	color: black;
+	background-color: #4C5685;
+	font-family: sans-serif;
+	font-size: 10pt;
 }
 
 div.body {
-  background-color: #4E5B98;
-  color: white;
-  margin: 0 auto;
-  padding: 3px 15px 15px 15px;
-  border-radius: 5px;
-  width: 600px;
+	background-color: #4E5B98;
+	color: white;
+	margin: 0 auto;
+	padding: 3px 15px 15px 15px;
+	border-radius: 5px;
+	width: 800px;
 }
 
-div.box {
-  background-color: #6573B2;
-  color: white;
-  border-style: solid;
-  border-width: 3px;
-  border-color: white;
-  border-radius: 5px;
-  padding: 0 20px 20px 20px;
-  margin: 15px 0 0 0;
+div.box1 {
+	background-color: white;
+	color: black;
+	border-style: solid;
+	border-width: 3px;
+	border-color: white;
+	border-radius: 5px;
+	padding: 0 20px 0px 20px;
+	margin: 15px 0 0 0;
 }
 
-table.action {
-  background-color: white;
-  color: black;
-  border-style: solid;
-  border-width: 3px;
-  border-color: #4E5B98;
-  border-radius: 5px;
-  padding: 5px;
-  margin: 15px 0 0 0;
+div.box1 dd {
+	padding: 0 0 20px 0;
 }
 
-table.browse {
-  background-color: white;
-  color: black;
-  border-style: solid;
-  border-width: 3px;
-  border-color: #4E5B98;
-  border-radius: 5px;
-  padding: 5px;
-  margin: 15px 0 0 0;
+table.box2 {
+	background-color: #F6F9F9;
+	color: black;
+	border-style: solid;
+	border-width: 2px;
+	border-color: #E0E5E5;
+	padding: 5px;
+	margin: 15px 0 0 0;
+	border-collapse: collapse;
 }
 
+table.action td, table.action th, table.browse td, table.browse th {
+	border-style: solid;
+	border-style: solid;
+	border-width: 2px 0;
+	border-color: #E0E5E5;
+	padding: 2px;
+}
+
+table.browse td {
+	border-width: 2px;
+}
+
+
+
+table.action th, table.browse th {
+	background-color: #E0E5E5;
+}
 
 .numeric {
 	text-align: right;
 }
 
+.negative {
+	color: red;
+}
+
 div.action {
-  display: inline;
-  font-size: small;
-  margin: 2px 4px;
+	display: inline;
+	font-size: small;
+	margin: 2px 4px;
 }
 
 td.label {
@@ -66,32 +81,32 @@ td.final {
 }
 
 .primary-1 {
-    background-color: #4E5B98;
+		background-color: #4E5B98;
 }
 .primary-2 {
-    background-color: #4C5685;
+		background-color: #4C5685;
 }
 .primary-3 {
-    background-color: #303E7E;
+		background-color: #303E7E;
 }
 .primary-4 {
-    background-color: #6573B2;
+		background-color: #6573B2;
 }
 .primary-5 {
-    background-color: #6E7AB2;
+		background-color: #6E7AB2;
 }
 .complement-1 {
-    background-color: #DFBA62;
+		background-color: #DFBA62;
 }
 .complement-2 {
-    background-color: #C3A764;
+		background-color: #C3A764;
 }
 .complement-3 {
-    background-color: #B8943D;
+		background-color: #B8943D;
 }
 .complement-4 {
-    background-color: #E7C676;
+		background-color: #E7C676;
 }
 .complement-5 {
-    background-color: #E7CA83;
+		background-color: #E7CA83;
 }

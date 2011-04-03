@@ -1,18 +1,18 @@
 $(document).ready ->
-	$("#bank").submit ->
-		balance = $(this).find(":input").serializeArray();
-		log balance, "all data"
-		$.post "/balance", balance, (err) ->
-			if err && err != ''
-				alert err
-			else
-				window.location.href = window.location.href
-		false
+	$("dt").dblclick ->
+		$(this).next().toggle("fast")
+
+	$("thead").dblclick ->
+		$(this).next().toggle("fast")
+
+	$("form").submit ->
+		submitForm(this)
 
 	$(".change").click ->
 		data = {}
 		data.action = "change"
 		data.submit = "Update"
+		log $(this).attr("name")
 		copyDataToAction data, this
 
 	$(".delete").click ->
@@ -21,10 +21,40 @@ $(document).ready ->
 		data.submit = "Delete"
 		copyDataToAction data, this
 
-	copyDataToAction = (data, clicked) ->
-		mapHidden(data, $(clicked).parent().parent().children().last().children())
-		mergeAttributes(data, $(":input", "#bank"))
+	$(".new").click ->
+		data = {}
+		data.action = "new"
+		data.submit = "Save"
+		copyDataToAction data, this
+
+	$(".date-picker").datepicker
+		onSelect: (dateText, inst) ->
+			epoch = $.datepicker.formatDate("@", $(this).datepicker('getDate')) / 1000
+			hidden = log $(this).next(), "Setting hidden date value to: " + epoch
+			$(this).next().val(epoch);
+
 	this
+
+submitForm = (form) ->
+	try
+		inputData = $(form).find(":input").serializeArray();
+		log inputData, "All form data"
+		$.post "/balance", inputData, (err) ->
+			if err && err != ''
+				alert err
+			else
+				log "Got response from form submit. Reloading."
+				window.location = window.location
+		false
+	catch e
+		log e
+		false
+
+copyDataToAction = (data, clicked) ->
+	mapHidden(data, $(clicked).parent().parent().children().last().children())
+	group = "#" + data.group
+	mergeAttributes data, $(":input", group)
+	log tbody = $("tbody", group).show()
 
 mapHidden = (data, hidden) ->
 	hidden.each (i, input) ->
@@ -33,12 +63,18 @@ mapHidden = (data, hidden) ->
 				data[name] = $(input).attr("value")
 
 mergeAttributes = (from, inputs) ->
-	log from, "Merging"
+	log from, "Merging: from"
+	log inputs, "Merging: to"
 	inputs.each (i, input) ->
 		for key, value of from
 			if $(input).attr("name") == key
 				log "Merging key: " + key + ", value: " + value
-				$(input).attr("value", value)
+				$(input).val(value)
+				if $(input).prev().hasClass("hasDatepicker")
+					epoch = parseInt(value)
+					if !isNaN epoch
+						raw = $.datepicker.parseDate("@",epoch * 1000)
+						$(input).prev().datepicker('setDate', raw)
 
 log = (text, note) ->
 	if console && console.log

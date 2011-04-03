@@ -1,77 +1,165 @@
 h2 Budget-Tracker
-.box
-	dt
-		h3 Bank balance
-	dd
-		form#bank
-			table.bank.action
-				tbody
-					tr
-						td.label Name:
-						td
-							input(name="name")
-							input(type="hidden", name="origin", value="")
-							input(type="hidden", name="action", value="add")
-					tr
-						td.label Balance:
-						td
-							input(name="balance")
-					tr
-						td.final(colspan="2")
-							input(name="submit", type="submit", value="Save")
-		- if (bank.length)
-			table.bank.browse
-				thead
-					tr
-						th Name
-						th Balance
-				tbody
-					- bank.forEach(function(account) {
-					tr
-						td= account.name
-						td.numeric= account.balance
-						td 
-							button.change Change
-						td
-							button.delete Delete
-							input(type="hidden", name="name",    value: account.name)
-							input(type="hidden", name="origin",  value: account.name)
-							input(type="hidden", name="action",  value="")
-							input(type="hidden", name="balance", value: account.balance)
-							input(type="hidden", name="id",      value: account._id)
-					- })
-
-.box
+.box1
+	dl
+		dt
+			h3 Bank balance
+		dd
+			form#bank
+				table.box2.action
+					thead
+						tr
+							th.new(colspan='2') New
+					tbody
+						tr
+							td.label Name:
+							td
+								input(name="name")
+								input(type="hidden", name="origin", value="")
+								input(type="hidden", name="action", value="add")
+								input(type="hidden", name="group",  value="bank")
+						tr
+							td.label Balance:
+							td
+								input(type="number", name="balance", step="0.01")
+						tr
+							td.label Date
+							td
+								input.date-picker(name="date")
+								input(type="hidden", name="epoch")
+						tr
+							td.final(colspan="2")
+								input(name="submit", type="submit", value="Save")
+			- if (bank.length)
+				table.box2.browse
+					thead
+						tr
+							th Name
+							th Balance
+							th Date
+							th
+							th
+					tbody
+						- bank.forEach(function(account) {
+							tr
+								td= account.name
+								td.numeric= account.balance
+								td= account.date
+								td
+									button.change Change
+								td
+									button.delete Delete
+									input(type="hidden", name="name",      value: account.name)
+									input(type="hidden", name="origin",    value: account.name)
+									input(type="hidden", name="action",    value="")
+									input(type="hidden", name="balance",   value: account.balance)
+									input(type="hidden", name="date",      value: account.date)
+									input(type="hidden", name="epoch",     value: account.epoch)
+									input(type="hidden", name="id",        value: account._id)
+									input(type="hidden", name="group",     value: account.group)
+						- })
+.box1
 	dl
 		dt
 			h3 Income and Expenses
 		dd
 			form#expense
-			table
-				tbody
-					tr
-						td Type?
-						td
-							select
-								option(value="expense")
-									| Expense
-								option(value="income")
-									| Income
-					tr
-						td Title
-						td
-							input(name="title")
-							input(name="action", value="add", type="hidden")
-					tr
-						td Amount
-						td
-							input(name="amount")
-					tr
-						td Frequency
-						td
-							select
-								option(value="once-off")
-									| Once Off
-								option(value="weekdays")
-									| Weekdays
-
+				table.box2.action
+					thead
+						tr
+							th.new(colspan='2') New
+					tbody
+						tr
+							td.label Type:
+							td
+								select(name="type")
+									option(value="expense")
+										| Expense
+									option(value="income")
+										| Income
+						tr
+							td.label Name:
+							td
+								input(name="name")
+								input(type="hidden", name="origin", value="")
+								input(type="hidden", name="action", value="add")
+								input(type="hidden", name="group",  value="expense")
+						tr
+							td.label Amount:
+							td
+								input(name="amount", type="number", step="0.01")
+						tr
+							td.label Every:
+							td
+								select(name="frequency")
+									option(value="once") Once
+									option(value="weekday") Weekday
+									option(value="day") Day
+									option(value="week") Week
+									option(value="fortnight") Fortnight
+									option(value="month") Month
+									option(value="quarter") Quarter
+									option(value="half") Half
+									option(value="year") Year
+						tr
+							td.label Date:
+							td
+								input.date-picker(name="date")
+								input(type="hidden", name="epoch")
+						tr
+							td.final(colspan="2")
+								input(name="submit", type="submit", value="Save")
+			- if (expenses.length)
+				table.box2.browse
+					thead
+						tr
+							th Name
+							th Type
+							th Amount
+							th Date
+							th
+							th
+					tbody
+						- expenses.forEach(function(expense) {
+						tr
+							td= expense.name
+							td= expense.type
+							td.numeric= expense.amount
+							td= expense.date
+							td
+								button.change Change
+							td
+								button.delete Delete
+								input(type="hidden", name="name",      value: expense.name)
+								input(type="hidden", name="origin",    value: expense.name)
+								input(type="hidden", name="action",    value="")
+								input(type="hidden", name="type",      value: expense.type)
+								input(type="hidden", name="amount",    value: expense.amount)
+								input(type="hidden", name="frequency", value: expense.frequency)
+								input(type="hidden", name="date",      value: expense.date)
+								input(type="hidden", name="epoch",     value: expense.epoch)
+								input(type="hidden", name="id",        value: expense._id)
+								input(type="hidden", name="group",     value: expense.group)
+						- })
+- if (totals.length)
+	.box1
+		dl
+			dt
+				h3 Totals
+			dd
+				table.box2.browse
+					thead
+						tr
+							th Date
+							th Name
+							th Amount
+					tbody
+						- totals.forEach(function(total) {
+						tr
+							td= total.date
+							td= total.name
+							- if (total.amount < 0) {
+								td.numeric.negative= total.amount
+							- } else {
+								td.numeric= total.amount
+							- }
+						- })
