@@ -27,8 +27,18 @@ $(document).ready ->
 		data.submit = "Save"
 		copyDataToAction data, this
 
-	$(".date-picker").datepicker
+	pickers = $(".date-picker").datepicker
 		onSelect: (dateText, inst) ->
+			name = this.name
+			option = if name == "fromDate" then "minDate" else if name = "uptoDate" then "maxDate"
+			if option
+				log "Option: " + option + ", This name: " + this.name
+				instance = $( this ).data "datepicker"
+				format = instance.settings.dateFormat or $.datepicker._defaults.dateFormat
+				date = $.datepicker.parseDate format, dateText, instance.settings
+				tbody = $(this).parent().parent().parent()
+				log other = $(tbody).find(".date-picker").not(this), "The other one:"
+				other.datepicker("option", option, date)
 			epoch = $.datepicker.formatDate("@", $(this).datepicker('getDate')) / 1000
 			hidden = log $(this).next(), "Setting hidden date value to: " + epoch
 			$(this).next().val(epoch);

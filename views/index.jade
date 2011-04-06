@@ -14,9 +14,9 @@ h2 Budget-Tracker
 							td.label Name:
 							td
 								input(name="name")
-								input(type="hidden", name="origin", value="")
-								input(type="hidden", name="action", value="add")
-								input(type="hidden", name="group",  value="bank")
+								input(type="hidden", name="id",      value="")
+								input(type="hidden", name="action",  value="add")
+								input(type="hidden", name="group",   value="bank")
 						tr
 							td.label Balance:
 							td
@@ -49,7 +49,6 @@ h2 Budget-Tracker
 								td
 									button.delete Delete
 									input(type="hidden", name="name",      value: account.name)
-									input(type="hidden", name="origin",    value: account.name)
 									input(type="hidden", name="action",    value="")
 									input(type="hidden", name="balance",   value: account.balance)
 									input(type="hidden", name="date",      value: account.date)
@@ -72,15 +71,13 @@ h2 Budget-Tracker
 							td.label Type:
 							td
 								select(name="type")
-									option(value="expense")
-										| Expense
-									option(value="income")
-										| Income
+									option(value="expense") Expense
+									option(value="income") Income
 						tr
 							td.label Name:
 							td
 								input(name="name")
-								input(type="hidden", name="origin", value="")
+								input(type="hidden", name="id", value="")
 								input(type="hidden", name="action", value="add")
 								input(type="hidden", name="group",  value="expense")
 						tr
@@ -101,10 +98,15 @@ h2 Budget-Tracker
 									option(value="half") Half
 									option(value="year") Year
 						tr
-							td.label Date:
+							td.label From Date:
 							td
-								input.date-picker(name="date")
-								input(type="hidden", name="epoch")
+								input.date-picker(name="fromDate")
+								input(type="hidden", name="fromEpoch")
+						tr
+							td.label Upto Date:
+							td
+								input.date-picker(name="uptoDate")
+								input(type="hidden", name="uptoEpoch")
 						tr
 							td.final(colspan="2")
 								input(name="submit", type="submit", value="Save")
@@ -115,7 +117,7 @@ h2 Budget-Tracker
 							th Name
 							th Type
 							th Amount
-							th Date
+							th From
 							th
 							th
 					tbody
@@ -124,19 +126,20 @@ h2 Budget-Tracker
 							td= expense.name
 							td= expense.type
 							td.numeric= expense.amount
-							td= expense.date
+							td= expense.fromDate
 							td
 								button.change Change
 							td
 								button.delete Delete
 								input(type="hidden", name="name",      value: expense.name)
-								input(type="hidden", name="origin",    value: expense.name)
 								input(type="hidden", name="action",    value="")
 								input(type="hidden", name="type",      value: expense.type)
 								input(type="hidden", name="amount",    value: expense.amount)
 								input(type="hidden", name="frequency", value: expense.frequency)
-								input(type="hidden", name="date",      value: expense.date)
-								input(type="hidden", name="epoch",     value: expense.epoch)
+								input(type="hidden", name="fromDate",  value: expense.fromDate)
+								input(type="hidden", name="uptoDate",  value: expense.uptoDate)
+								input(type="hidden", name="fromEpoch", value: expense.fromEpoch)
+								input(type="hidden", name="uptoEpoch", value: expense.uptoEpoch)
 								input(type="hidden", name="id",        value: expense._id)
 								input(type="hidden", name="group",     value: expense.group)
 						- })
@@ -151,15 +154,21 @@ h2 Budget-Tracker
 						tr
 							th Date
 							th Name
-							th Amount
+							th Inc Today
+							th Exc Today
 					tbody
 						- totals.forEach(function(total) {
 						tr
 							td= total.date
 							td= total.name
-							- if (total.amount < 0) {
-								td.numeric.negative= total.amount
+							- if (total.including < 0) {
+								td.numeric.negative= total.including
 							- } else {
-								td.numeric= total.amount
+								td.numeric= total.including
+							- }
+							- if (total.excluding < 0) {
+								td.numeric.negative= total.excluding
+							- } else {
+								td.numeric= total.excluding
 							- }
 						- })
