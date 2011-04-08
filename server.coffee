@@ -54,11 +54,12 @@ validate = (row, table, action, callback) ->
 			look row.unique, "Unique qualifier"
 			if action != 'delete'
 				callback "Amount is not numeric" if not makeFloat row, 'balance'
-				callback "Epoch is not numeric"  if not makeFloat row, 'epoch'
+				callback "Epoch is not numeric"  if not makeInt   row, 'epoch'
 		if row.group == 'expense'
 			if action != 'delete'
 				callback "Amount is not numeric" if not makeFloat row, 'amount'
-				callback "Epoch is not numeric"  if not makeFloat row, 'epoch'
+				callback "Epoch is not numeric"  if not makeInt   row, 'fromEpoch'
+				callback "Epoch is not numeric"  if not makeInt   row, 'uptoEpoch'
 			row.unique = name : row.name, epoch : row.epoch
 			if action != 'add'
 				row.unique._id = $ne : row.key._id
@@ -74,6 +75,7 @@ defineTotals = (locals) ->
 	bank =
 		name: 'Bank Balance'
 		including: sum locals.bank, 'balance'
+	###
 	expense =
 		name: 'Expenses After Last Bank Update'
 		including: sumExpenses currentBank.epoch
@@ -89,7 +91,24 @@ defineTotals = (locals) ->
 		including: sumExpenses nextWeekEpoch
 		excluding: sumExpenses nextWeekEpoch - 1
 		date: formatDate nextWeekEpoch
-	locals.totals = [bank, expense, total, oneWeek]
+	###
+	locals.totals = [bank]
+	includingTotal = 0
+	excludingTotal = 0
+	nextDate = dateOf currentBank.epoch
+	exNextDate = dateOf(nextDate).addSeconds 1
+	for i in [1..10]
+		includingTotal += sumEachExpense locals.expenses, nextDate, 1
+		excludingTotal += sumEachExpense locals.expenses, exNextDate, 1
+		weekNext =
+			name: 'Week ' + i + ' Expenses'
+			including: includingTotal
+			excluding: excludingTotal
+			date: formatDate nextDate
+		locals.totals.push(weekNext)
+		nextDate.addWeeks(1)
+		exNextDate.addWeeks(1)
+
 
 pad = (str, length) ->
 	str = String(str);
@@ -97,8 +116,11 @@ pad = (str, length) ->
 		str = '0' + str
 	str
 
+dateOf = (epoch) ->
+	new Date(if epoch instanceof Date then epoch else parseInt(epoch) * 1000)
+
 formatDate = (epoch) ->
-	d = new Date(epoch * 1000)
+	d = new Date(if epoch instanceof Date then epoch else epoch * 1000)
 	pad(d.getDate(), 2) + '/' + d.getMonthAbbr() + '/' + d.getFullYear()
 
 max = (list, p) ->
@@ -113,14 +135,53 @@ max = (list, p) ->
 			log "Expected number: " + p + " is " + obj[p]
 	top
 
+sumEachExpense = (expenses, start, weeks) ->
+	###
+	expense: Expense
+	start: Date
+	weeks: Integer
+	result: Integer
+	###
+	total = 0
+	after = start
+	before = new Date(start).addWeeks(weeks)
+	for expense in expenses
+		total += sumExpense expense, after, before
+	total
+
+sumExpense = (expense, after, before) ->
+	###
+	After and Before are both javascript Date objects. Expense must implement:
+		.frequency: String - Either day, week, fortnight, month, quarter, half, year
+		.amount: Float - The amount for each frequency
+		.fromEpoch: Int - The amount the expense started. Epoch is seconds since 1970 (not millis)
+		.uptoEpoch: Int - (optional) When the frequency of the expense terminates (including)
+		.type: String - If expense then amount is made negative (otherwise considered income)
+	###
+	total = 0
+	next = dateOf expense.fromEpoch
+	from = dateOf expense.fromEpoch
+	upto = dateOf expense.uptoEpoch
+	log "From: " + from + " Upto: " + upto
+	log "Aftr: " + after + " Befr: " + before
+	while next < before and next <= upto
+		if next >= after
+			total += negafyExpense expense
+		switch expense.frequency
+			when "day" then next.addDays(1)
+			when "week" then next.addWeeks(1)
+			else next = false
+	total
+
+negafyExpense = (expense) ->
+	negafy expense, 'type', 'expense', expense.amount
+
 sum = (list, p, negKey, negVal, epoch, after, before) ->
 	balance = 0
-	log "p: " + p + " negKey: " + negKey + " negVal: " + negVal + " epoch: " + epoch + " after: " + after + " before: " + before
 	for obj in list
 		amount = parseFloat(obj[p])
 		if !isNaN(amount)
 			amount = negafy obj, negKey, negVal, amount
-			log "Amount: " + amount
 			if didFloat obj, epoch
 				if !isNaN after
 					if obj[epoch] > after
@@ -153,6 +214,17 @@ makeFloat = (obj, property) ->
 		ok = !isNaN obj[property]
 		if ok
 			obj[property] = parseFloat(obj[property])
+	ok
+
+didInt = (obj, property) ->
+	obj and property and obj[property] and makeInt obj, property
+
+makeInt = (obj, property) ->
+	ok = true
+	if obj[property]
+		ok = !isNaN obj[property]
+		if ok
+			obj[property] = parseInt(obj[property])
 	ok
 
 negafy = (obj, negKey, negVal, amount) ->

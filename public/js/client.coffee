@@ -9,25 +9,25 @@ $(document).ready ->
 		submitForm(this)
 
 	$(".change").click ->
-		data = {}
-		data.action = "change"
-		data.submit = "Update"
+		data =
+			action: "change"
+			submit: "Update"
 		log $(this).attr("name")
 		copyDataToAction data, this
 
 	$(".delete").click ->
-		data = {}
-		data.action = "delete"
-		data.submit = "Delete"
+		data =
+			action: "delete"
+			submit: "Delete"
 		copyDataToAction data, this
 
 	$(".new").click ->
-		data = {}
-		data.action = "new"
-		data.submit = "Save"
+		data =
+			action: "new"
+			submit: "Save"
 		copyDataToAction data, this
 
-	pickers = $(".date-picker").datepicker
+	$(".date-picker").datepicker
 		onSelect: (dateText, inst) ->
 			name = this.name
 			option = if name == "fromDate" then "minDate" else if name = "uptoDate" then "maxDate"
@@ -37,7 +37,7 @@ $(document).ready ->
 				format = instance.settings.dateFormat or $.datepicker._defaults.dateFormat
 				date = $.datepicker.parseDate format, dateText, instance.settings
 				tbody = $(this).parent().parent().parent()
-				log other = $(tbody).find(".date-picker").not(this), "The other one:"
+				log other = $(tbody).find(".date-picker").not(this), "The other date picker in this tbody:"
 				other.datepicker("option", option, date)
 			epoch = $.datepicker.formatDate("@", $(this).datepicker('getDate')) / 1000
 			hidden = log $(this).next(), "Setting hidden date value to: " + epoch
