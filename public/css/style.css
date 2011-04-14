@@ -1,75 +1,142 @@
 body {
-	color: black;
-	background-color: #4C5685;
+	background-color: #E3E8F2;
 	font-family: sans-serif;
-	font-size: 10pt;
+	/*font-size: 10pt;*/
 }
 
 div.body {
-	background-color: #4E5B98;
-	color: white;
+	background-color: #CCD9F2;
+	color: #325FBA;
 	margin: 0 auto;
-	padding: 3px 15px 15px 15px;
+	padding: 3px 20px 20px 20px;
+	border-style: solid;
+	border-width: 3px;
+	border-color: #EFF2F6;
 	border-radius: 5px;
 	width: 800px;
 }
 
-div.box1 {
-	background-color: white;
-	color: black;
+div.box {
 	border-style: solid;
 	border-width: 3px;
-	border-color: white;
+	border-color: #EFF2F6;
 	border-radius: 5px;
 	padding: 0 20px 0px 20px;
 	margin: 15px 0 0 0;
 }
 
-div.box1 dd {
+div.box dd {
 	padding: 0 0 20px 0;
 }
 
-table.box2 {
-	background-color: #F6F9F9;
-	color: black;
+table {
+	background-color: #F0EAAF;
+	border-color: #EFF2F6;
+	border-width: 3px;
 	border-style: solid;
-	border-width: 2px;
-	border-color: #E0E5E5;
-	padding: 5px;
+	color: #393300;
 	margin: 15px 0 0 0;
-	border-collapse: collapse;
+	padding: 10px;
 }
 
-table.action td, table.action th, table.browse td, table.browse th {
+table.action {
+	padding-top: 15px;
+}
+
+table.browse {
+	padding-top: 5px;
+}
+
+table.browse th {
+	border-width: 0 0 3px 0;
 	border-style: solid;
-	border-style: solid;
-	border-width: 2px 0;
-	border-color: #E0E5E5;
-	padding: 2px;
+	border-color: white;
 }
 
-table.browse td {
-	border-width: 2px;
+table.td {
 }
 
+table.action td, table.action th {
+	padding: 2px 1px
+}
+table.browse td, table.browse th {
+	padding: 2px 8px
+}
 
+div.register-box {
+	float: left;
+	padding: 3px 10px 0 0
+}
 
-table.action th, table.browse th {
-	background-color: #E0E5E5;
+div.register-box input {
+	margin-right: 10px;
+}
+
+div.help-text {
+	padding: 15px 3px 3px 3px;
+	width: 500px;
+}
+
+dd div.help-text {
+	margin: -40px 3px 3px 3px;
+	width: 400px;
+}
+
+div#signon {
+	background-color: #AFC4EF;
+	color: #325FBA;
+}
+
+div#expense {
+	background-color: #DDAFF0;
+	color: #520076;
+}
+
+div#bank {
+	background-color: #F0C4AE;
+	color: #832C00;
+}
+
+div#totals {
+	background-color: #AFF0BE;
+	color: #00A125;
+}
+
+div#totals dd {
+	min-height: 150px;
+}
+
+div.expander {
+	padding-right: 10px;
+}
+
+.bigger {
+	font-size: 200%;
+}
+
+.tagline {
+	font-size: 110%;
+}
+
+.smaller {
+	font-size: 90%;
 }
 
 .numeric {
 	text-align: right;
+	padding-right: 2px;
 }
 
 .negative {
 	color: red;
 }
 
-div.action {
-	display: inline;
-	font-size: small;
-	margin: 2px 4px;
+.float-right {
+	float: right;
+}
+
+.float-left {
+	float: left;
 }
 
 td.label {
@@ -80,33 +147,10 @@ td.final {
 	text-align: right;
 }
 
-.primary-1 {
-		background-color: #4E5B98;
+dd {
+	margin-left: 0;
 }
-.primary-2 {
-		background-color: #4C5685;
-}
-.primary-3 {
-		background-color: #303E7E;
-}
-.primary-4 {
-		background-color: #6573B2;
-}
-.primary-5 {
-		background-color: #6E7AB2;
-}
-.complement-1 {
-		background-color: #DFBA62;
-}
-.complement-2 {
-		background-color: #C3A764;
-}
-.complement-3 {
-		background-color: #B8943D;
-}
-.complement-4 {
-		background-color: #E7C676;
-}
-.complement-5 {
-		background-color: #E7CA83;
+
+h2 {
+	font-weight: normal;
 }

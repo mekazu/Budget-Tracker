@@ -1,11 +1,17 @@
-express = require('express')
-app = express.createServer()
-MongoDb = require('mongodb').Db
-ObjectID= require('mongodb').BSONNative.ObjectID
-MongoServer= require('mongodb').Server
-sys = require('sys')
-dateUtils = require('date-utils')
+express			= require('express')
+sys					= require('sys')
+dateUtils		= require('date-utils')
+mongodb			= require('mongodb')
+util				= require('./server/util.js')
 
+MongoDb			= mongodb.Db
+ObjectID		= mongodb.BSONNative.ObjectID
+MongoServer = mongodb.Server
+
+MONEY = "money"
+USER = "user"
+
+app = express.createServer()
 database = (host, port, database) ->
 	this.db = new MongoDb(database, new MongoServer(host, port, {auto_reconnect: true}, {}))
 	this.db.open ->
@@ -13,101 +19,245 @@ database = (host, port, database) ->
 
 db = new database("localhost", 27017, "budget").db
 
-MONEY = "money"
-
 app.configure ->
 	app.use express.static(__dirname + '/public')
-	app.use(express.bodyParser())
+	app.use express.bodyParser()
+	app.use express.cookieParser()
+	app.use express.session(secret: "Ci93kLKjvlk3l2jcXK3k")
 
 indexCount = 0;
 app.get '/', (req, res) ->
-	locals = {}
-	log "Loaded Index: " + indexCount++;
-	list {group: 'bank'}, MONEY, (err, results) ->
-		locals.bank = results
-		list {group: 'expense'}, MONEY, (err, results) ->
-			locals.expenses = results
-			defineTotals locals
-			res.render 'index.jade', {title: "Home", locals: look locals, "Locals:"}
+	# Prefs are stored in session and relayed to locals
+	prefs = preferences req
+	ses = req.session
+	initSession(ses, prefs)
+	locals = {prefs: prefs, log: log, signon: [ses.account]}
+	render = ->
+		look locals, "Locals:"
+		res.render 'index.jade', {title: "Home", locals: locals}
+	if ses.account.anon and not ses.account._id
+		# Unregistered user who hasn't done anything yet
+		prefs.anon = ses.account.anon
+		render()
+	else
+		# User with something to display (not ses.account.anon or ses.account._id)
+		if ses.account.user
+			# Registered User
+			prefs.user = ses.account.user
+		list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
+			locals.bank = results
+			list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
+				locals.expense = results
+				defineTotals locals
+				log "Here"
+				render()
+
+initSession = (ses, prefs) ->
+	if not ses.account
+		# New sesion: set anon to session and continue
+		ses.account = anon: ++indexCount, group: 'signon'
+		prefs.autofocus = 'signon'
+		log "New user: " + ses.account.anon
 
 app.post "/balance", (req, res) ->
+	prefs = preferences req
+	ses = req.session
+	initSession(ses, prefs)
 	look p = req.body, "The form sent to balance:"
+	# If not insert the form sends an id that we convert to an ObjectID and set to p.key
 	id = dislodge p, 'id'
 	look (p.key = _id : new ObjectID id), "Key definition:" if id
-	action = dislodge p, 'action'
-	validate req.body, MONEY, action, (err, row) ->
+	action = p.action
+	if ses.account
+		p.account = ses.account._id
+	validate p, ses, (err, row) ->
 		if err
-			res.send("Validation Error: " + err)
+			res.send("Validation Error: " + log err)
 		else
-			persist row, MONEY, action, (err, docs) ->
-				log "Responding"
-				res.send(if err then "Error: " + err else '')
+			prefs.autofocus = row.group
+			if row.group == 'signon'
+				signon row, ses, (err, user) ->
+					if err
+						err = "Signon Error: " + err
+					else
+						visible prefs, false, 'signon'
+						visible prefs, true, 'bank'
+						visible prefs, true, 'expense'
+						visible prefs, true, 'totals'
+						prefs.autofocus = 'expense'
+					res.send(err)
+			else if row.group == "signoff"
+				prefs.autofocus = "signon"
+				ses.destroy()
+				res.send('')
+			else
+				persist row, MONEY, action, (err, docs) ->
+					log "Responding"
+					res.send(if err then "Data Error: " + err else '')
+
+app.post "/toggle", (req, res) ->
+	p = req.body
+	visible preferences(req), p.visible == 'true', p.name
+	res.send("Saved " + p.name + " to " + preferences(req).style[p.name] + " in session");
+
+visible = (prefs, visible, name) ->
+	if visible
+		dislodge prefs.style, name
+	else
+		prefs.style[name] = "display: none;"
+
+init = (obj, p, as) ->
+	property = obj[p]
+	if not property
+		property = if as? then as else {}
+		obj[p] = property
+	property
+
+preferences = (req) ->
+	prefs = init req.session, 'preferences'
+	init prefs, 'style'
+	prefs
 
 app.listen(8743)
 
-validate = (row, table, action, callback) ->
-	if table == MONEY
-		if row.group == 'bank'
-			row.unique = name : row.name
-			if action != 'add'
+# Structure {group: {field: {needs: needs}}}
+validation =
+	signon :
+		user : {name: "Username", required: true}
+		pass : {name: "Password", required: true}
+	bank :
+		name		: {name: "Name",		required: true}
+		balance : {name: "Balance", required: true, beFloat: true}
+		epoch		: {name: "Date",		required: true,	 beInt: true}
+	expense :
+		name			: {name: "Name",			 required: true}
+		amount		: {name: "Amount",		 required: true, beFloat: true}
+		fromEpoch : {name: "From Date",	 required: true,	 beInt: true}
+		uptoEpoch : {name: "Upto Date",	 required: false,	 beInt: true}
+
+typeCheck = (row) ->
+	messages = []
+	for group, fields of validation
+		if row.group == group and row.action != 'delete'
+			for field, needs of fields
+				row[field] = row[field].trim() if row[field] and row[field] instanceof String
+				if needs.required and not row[field]
+					messages.push "The " + needs.name + " is a required field"
+				if needs.beFloat and not makeFloat row, field
+					messages.push "The " + needs.name + " must be numeric"
+				else if needs.beInt and not makeInt row, field
+					messages.push "The " + needs.name + " must be a whole number"
+	messages
+
+
+delimit = (del, list) ->
+	str = ""
+	d = ""
+	for item in list
+		str += d + item
+		d = del
+	str
+
+validate = (row, ses, callback) ->
+	delay = false
+	if not err = delimit ", ", typeCheck row
+		row.unique = {account: row.account}
+		if row.group == 'signon'
+			row.unique.user = row.user
+			#this needs to be change. Do this on client size through the form.
+			if row.action != 'add'
 				row.unique._id = $ne : row.key._id
-			look row.unique, "Unique qualifier"
-			if action != 'delete'
-				callback "Amount is not numeric" if not makeFloat row, 'balance'
-				callback "Epoch is not numeric"  if not makeInt   row, 'epoch'
-		if row.group == 'expense'
-			if action != 'delete'
-				callback "Amount is not numeric" if not makeFloat row, 'amount'
-				callback "Epoch is not numeric"  if not makeInt   row, 'fromEpoch'
-				callback "Epoch is not numeric"  if not makeInt   row, 'uptoEpoch'
-			row.unique = name : row.name, epoch : row.epoch
-			if action != 'add'
+		else if ses.account.anon and not row.account
+			delay = true
+			tempSignon ses, (err, account) ->
+				if err
+					callback err
+				else
+					# Not sure if this is the 'right' way to get ObjectID string
+					row.account = account._id.toString()
+					row.unique.account = row.account
+					look row, "New user with account: " + row.account + " Revalidating row: "
+					validate row, ses, callback
+		else if row.group == 'bank'
+			if row.action != 'add'
 				row.unique._id = $ne : row.key._id
-	callback false, row
+			row.unique.name = row.name
+		else if row.group == 'expense'
+			row.unique = name : row.name, epoch : row.fromEpoch
+			if row.action != 'add'
+				row.unique._id = $ne : row.key._id
+	if not delay
+		dislodge row, 'action'
+		callback err, row
+
+tempSignon = (ses, callback) ->
+	dirty = {anon: ses.account.anon}
+	persist dirty, USER, 'add', (err, docs) ->
+		if err or docs.legnth < 1
+			callback "Sorry, there was a problem: " + (err or "nothing saved")
+		else
+			ses.account = docs[0]
+			callback false, ses.account
+
+signon = (row, ses, callback) ->
+	register = dislodge(row, 'register')
+	findOne {user: row.user, pass: row.pass}, USER, (err, account) ->
+		if account
+			ses.account = account;
+			ses.account.group = 'signon'
+			callback null, account.user
+		else if register and register == 'on'
+			findOne {user: row.user}, USER, (err, account) ->
+				if account
+					callback "This username is taken, please choose a different one"
+				else if err instanceof Error
+					callback err.message
+				else
+					dislodge row, 'group'
+					dislodge row.account
+					action = dislodge row, 'action'
+					if ses.account.anon and ses.account._id
+						action = 'change'
+						dislodge ses.account.anon
+						row._id = ses.account._id
+						row.key = {id: row._id}
+					persist row, USER, action, (err, docs) ->
+						if err instanceof Error
+							callback err
+						else
+							signon row, ses, callback
+		else
+			callback "Username password combination incorrect"
 
 defineTotals = (locals) ->
 	currentBank = max(locals.bank, 'epoch')
-	sumExpenses = (epoch) ->
-		sum locals.expenses, 'amount', 'type', 'expense', 'epoch', epoch
-	look nextWeek = new Date(currentBank.epoch * 1000).addWeeks(1), "Next week:"
-	nextWeekEpoch = nextWeek.getTime() / 1000
-	expenseNextWeek = sumExpenses
-	bank =
-		name: 'Bank Balance'
-		including: sum locals.bank, 'balance'
-	###
-	expense =
-		name: 'Expenses After Last Bank Update'
-		including: sumExpenses currentBank.epoch
-		excluding: sumExpenses currentBank.epoch - 1
-		date: currentBank.date
-	total =
-		name: 'Total After today'
-		including: bank.including + expense.including
-		excluding: bank.including + expense.excluding
-		date: currentBank.date
-	oneWeek =
-		name: 'Next Week'
-		including: sumExpenses nextWeekEpoch
-		excluding: sumExpenses nextWeekEpoch - 1
-		date: formatDate nextWeekEpoch
-	###
-	locals.totals = [bank]
-	includingTotal = 0
-	excludingTotal = 0
-	nextDate = dateOf currentBank.epoch
-	exNextDate = dateOf(nextDate).addSeconds 1
-	for i in [1..10]
-		includingTotal += sumEachExpense locals.expenses, nextDate, 1
-		excludingTotal += sumEachExpense locals.expenses, exNextDate, 1
-		weekNext =
-			name: 'Week ' + i + ' Expenses'
-			including: includingTotal
-			excluding: excludingTotal
-			date: formatDate nextDate
-		locals.totals.push(weekNext)
-		nextDate.addWeeks(1)
-		exNextDate.addWeeks(1)
+	if currentBank
+		after = dateOf currentBank.epoch;
+		bank = balance: sum locals.bank, 'balance'
+		locals.totals = [bank]
+		total = 0
+		for i in [1..5]
+			before = nextIncrement after, i
+			amount = sumEachExpense locals.expense, after, before
+			if amount != 0
+				total += amount
+				weekNext =
+					payment: tidyFloat amount * -1
+					balance: tidyFloat total + bank.balance
+					date: formatDate after
+				locals.totals.push(weekNext)
+			after = before
+
+nextIncrement = (after, i) ->
+	next = dateOf after
+	if i < 14
+		next.addDays 1
+	else if i < 21
+		next.addWeeks 1
+	else if i < 41
+		next.addMonths 1
+	else
+		next.addYears 1
 
 
 pad = (str, length) ->
@@ -117,11 +267,14 @@ pad = (str, length) ->
 	str
 
 dateOf = (epoch) ->
-	new Date(if epoch instanceof Date then epoch else parseInt(epoch) * 1000)
+	if epoch then new Date(if epoch instanceof Date then epoch else parseInt(epoch) * 1000) else null
+
+tidyFloat = (float) ->
+	Math.round(float * 100) / 100
 
 formatDate = (epoch) ->
 	d = new Date(if epoch instanceof Date then epoch else epoch * 1000)
-	pad(d.getDate(), 2) + '/' + d.getMonthAbbr() + '/' + d.getFullYear()
+	pad(d.getDate(), 2) + ' ' + d.getMonthAbbr() + ' ' + d.getFullYear()
 
 max = (list, p) ->
 	amount = 0
@@ -135,19 +288,17 @@ max = (list, p) ->
 			log "Expected number: " + p + " is " + obj[p]
 	top
 
-sumEachExpense = (expenses, start, weeks) ->
+sumEachExpense = (expenses, after, before) ->
 	###
 	expense: Expense
-	start: Date
-	weeks: Integer
+	after: Date
+	before: Date
 	result: Integer
 	###
 	total = 0
-	after = start
-	before = new Date(start).addWeeks(weeks)
 	for expense in expenses
 		total += sumExpense expense, after, before
-	total
+	tidyFloat total
 
 sumExpense = (expense, after, before) ->
 	###
@@ -160,50 +311,39 @@ sumExpense = (expense, after, before) ->
 	###
 	total = 0
 	next = dateOf expense.fromEpoch
-	from = dateOf expense.fromEpoch
 	upto = dateOf expense.uptoEpoch
-	log "From: " + from + " Upto: " + upto
-	log "Aftr: " + after + " Befr: " + before
-	while next < before and next <= upto
+	log "Next: " + next + " Upto: " + upto
+	while next and next < before and (!upto or next <= upto)
 		if next >= after
+			log "Next: " + next
 			total += negafyExpense expense
 		switch expense.frequency
 			when "day" then next.addDays(1)
+			when "weekday" then addWeekDays(next, 1)
 			when "week" then next.addWeeks(1)
+			when "fortnight" then next.addWeeks(2)
+			when "month" then next.addMonths(1)
+			when "quarter" then next.addMonths(3)
+			when "half" then next.addMonths(6)
+			when "year" then next.addYears(1)
 			else next = false
-	total
+	log tidyFloat total, "Total: "
+
+addWeekDays = (date, n) ->
+	date.addDays(n)
+	while 0 >= date.getDay() or date.getDay() >= 6
+		date.addDays(n)
 
 negafyExpense = (expense) ->
 	negafy expense, 'type', 'expense', expense.amount
 
-sum = (list, p, negKey, negVal, epoch, after, before) ->
+sum = (list, p, negKey, negVal, epoch) ->
 	balance = 0
 	for obj in list
 		amount = parseFloat(obj[p])
 		if !isNaN(amount)
-			amount = negafy obj, negKey, negVal, amount
-			if didFloat obj, epoch
-				if !isNaN after
-					if obj[epoch] > after
-						if !isNaN before
-							if obj[epoch] < before
-								balance += amount
-							else
-								log "After after but not before before"
-						else
-							balance += amount
-					else
-						log "Not after after"
-				else if !isNaN before
-					if obj[epoch] < before
-						balance += amount
-					else
-						log "Not before before"
-				else
-					log "Not before before or after after"
-			else
-				balance += amount
-	balance
+			balance += negafy obj, negKey, negVal, amount
+	tidyFloat balance
 
 didFloat = (obj, property) ->
 	obj and property and obj[property] and makeFloat obj, property
@@ -238,8 +378,14 @@ dislodge = (obj, property) ->
 	delete obj[property]
 	value
 
-list = (key, table, callback) ->
+findOne = (key, table, callback) ->
 	look key, "Looking in " + table + " for: "
+	db.collection table, (err, c) ->
+		callback(err, c) if err instanceof Error
+		c.findOne key, (err, doc) ->
+			callback(err, doc)
+
+list = (key, table, callback) ->
 	db.collection table, (err, c) ->
 		callback(err, c) if err instanceof Error
 		c.find key, (err, cursor) ->
@@ -249,8 +395,11 @@ list = (key, table, callback) ->
 
 ensureUnique = (connection, qualifier, callback) ->
 	if qualifier
-		connection.count qualifier, (err, count) ->
+		look qualifier, "Qualifier: "
+		connection.count [qualifier], (err, count) ->
+			log 1
 			callback(err, count)
+		log 3
 	else
 		callback(null, 0)
 
@@ -259,11 +408,13 @@ persist = (row, table, action, callback) ->
 	unique = dislodge row, 'unique'
 	final = (err, docs) ->
 		if err
-			look err, "Error"
-		look docs, "Success"
-		db.close()
+			look err, "Error in Persisting:"
+			look row, "Failed to save:"
+		else
+			look docs, "Saved:"
 		callback(err, docs) if callback
 	db.collection table, (err, c) ->
+		callback(err.message) if err instanceof Error
 		if action == 'add'
 			ensureUnique c, unique, (err, count) ->
 				if err instanceof Error
@@ -300,12 +451,5 @@ persist = (row, table, action, callback) ->
 		else
 			callback("Action: " + action + " not understood.");
 
-log = (text, note) ->
-	log note if note
-	sys.puts text
-	text
-
-look = (obj, note) ->
-	log note if note
-	sys.puts sys.inspect obj
-	obj
+log = util.log
+look = util.look

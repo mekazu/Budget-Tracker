@@ -1,6 +1,12 @@
 $(document).ready ->
 	$("dt").dblclick ->
-		$(this).next().toggle("fast")
+		toggleDD($(this).next())
+
+	$("div.expander").click ->
+		toggleDD($(this).parent().next());
+
+	$("input#register").click ->
+		$(this).parent().next().val(if $(this).is(":checked") then "Register" else "Sign On")
 
 	$("thead").dblclick ->
 		$(this).next().toggle("fast")
@@ -8,24 +14,18 @@ $(document).ready ->
 	$("form").submit ->
 		submitForm(this)
 
-	$(".change").click ->
+	$("button.action").click ->
 		data =
-			action: "change"
-			submit: "Update"
-		log $(this).attr("name")
+			submit: $(this).val()
+			action: $(this).attr("name")
 		copyDataToAction data, this
 
-	$(".delete").click ->
-		data =
-			action: "delete"
-			submit: "Delete"
-		copyDataToAction data, this
+	$("input#expensesPaid").click ->
+		log checked = $(this).is(":checked")
+		for i in [2..3]
+			$("#totals tr td:nth-child(" + i + ")").toggle()
 
-	$(".new").click ->
-		data =
-			action: "new"
-			submit: "Save"
-		copyDataToAction data, this
+	$("table.browse").tablesorter()
 
 	$(".date-picker").datepicker
 		onSelect: (dateText, inst) ->
@@ -45,6 +45,16 @@ $(document).ready ->
 
 	this
 
+toggleDD = (dd) ->
+	visible = dd.is(":hidden")
+	dd.toggle()
+	dt = dd.prev();
+	expander = $("div.expander", dt)
+	expander.text(if expander.text() == '+' then '-' else '+')
+	$.post "/toggle", {name: dt.attr("name"), visible: visible}, (err) ->
+		log err if err
+
+
 submitForm = (form) ->
 	try
 		inputData = $(form).find(":input").serializeArray();
@@ -54,20 +64,31 @@ submitForm = (form) ->
 				alert err
 			else
 				log "Got response from form submit. Reloading."
-				window.location = window.location
+				window.location.href = window.location.pathname + "#" + log $(form).attr("id")
+				window.location.reload(true);
 		false
 	catch e
 		log e
 		false
 
-copyDataToAction = (data, clicked) ->
-	mapHidden(data, $(clicked).parent().parent().children().last().children())
-	group = "#" + data.group
-	mergeAttributes data, $(":input", group)
-	log tbody = $("tbody", group).show()
+###
+Finds the hidden inputs of the change or delete buttons based on a convention
+of keeping the inputs in the last td of the catalog table.
+###
+findModifyActionHiddenInputs = (clicked) ->
+	# button.td.tr.allTds.lastTd.hiddenInputs
+	$(clicked).parent().parent().children().last().children()
 
-mapHidden = (data, hidden) ->
-	hidden.each (i, input) ->
+copyDataToAction = (data, clicked) ->
+	mapHidden(data, findModifyActionHiddenInputs clicked)
+	log form = "#" + data.group, "Group"
+	$(form)[0].reset() if data.action == 'add'
+	mergeAttributes data, $(":input", form)
+	log tbody = $("tbody", form).show()
+	$(":input", form).first().focus()
+
+mapHidden = (data, hiddens) ->
+	hiddens.each (i, input) ->
 		if name = $(input).attr("name")
 			if !data[name]
 				data[name] = $(input).attr("value")
@@ -93,4 +114,5 @@ log = (text, note) ->
 		console.log text
 		if text.length && text.jQuery
 			log text[0]
+	text
 

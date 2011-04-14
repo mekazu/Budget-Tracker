@@ -1,71 +1,97 @@
-h2 Budget-Tracker
-.box1
+- var signon = typeof signon != 'undefined' && signon.length ? signon : null;
+- var bank = typeof bank != 'undefined' && bank.length ? bank : null;
+- var expense = typeof expense != 'undefined' && expense.length ? expense : null;
+- var totals = typeof totals != 'undefined' && totals.length ? totals : null;
+- var autoRegister = !prefs.user && (expense || bank)
+- var expander = function(displayed) {return displayed ? '+' : '-';};
+
+.help-text.float-right.tagline
+	| Use this app to keep track of your expense and help figure out how
+	| much money you will have in the future.
+
+h1 Budget-Tracker
+.box#signon
+	a(name="signon")
 	dl
-		dt
-			h3 Bank balance
-		dd
-			form#bank
-				table.box2.action
-					thead
-						tr
-							th.new(colspan='2') New
+		dt(name = "signon")
+			- if (prefs.user)
+				form#signoff.float-right
+					input(name="submit", type="submit",  value="Sign Off", autofocus: prefs.autofocus == "signon")
+					input(type="hidden", name="group",   value="signoff")
+			div.expander.float-left #{expander(prefs.style.signon)}
+			h2 #{prefs.user ? "Welcome " + prefs.user : "Log In"}
+		dd(style: prefs.style.signon)
+			.help-text.float-right
+				span.highlight
+					span.bigger Step 1 / 3
+					- if (prefs.user)
+						p.tagline You can log out when you're done using the button above.
+						p.smaller This ensures that you are not automatically logged back in when you next visit.
+					- else
+						p.tagline Sign on or Register.
+						- if (expense || bank)
+							p.smaller You can register an account to save your budget information.
+						- else
+							p.smaller You can skip this step for now if you don't already have an account.
+			form#signon
+				table.action
 					tbody
 						tr
-							td.label Name:
+							td.label Username:
 							td
-								input(name="name")
-								input(type="hidden", name="id",      value="")
+								input(type="text",   name="user",    autofocus)
 								input(type="hidden", name="action",  value="add")
-								input(type="hidden", name="group",   value="bank")
+								input(type="hidden", name="group",   value="signon")
 						tr
-							td.label Balance:
+							td.label Password:
 							td
-								input(type="number", name="balance", step="0.01")
-						tr
-							td.label Date
-							td
-								input.date-picker(name="date")
-								input(type="hidden", name="epoch")
+								input(type="password", name="pass")
 						tr
 							td.final(colspan="2")
-								input(name="submit", type="submit", value="Save")
-			- if (bank.length)
-				table.box2.browse
+								.register-box
+									input#register(name="register", type="checkbox", checked: autoRegister)
+									| Register New Account
+								input(name="submit", type="submit", value: autoRegister ? "Register" : "Sign On")
+			- if (signon)
+				table.browse(style: signon[0].anon ? "display:none;" : "")
 					thead
 						tr
-							th Name
-							th Balance
-							th Date
+							th User
 							th
 							th
 					tbody
-						- bank.forEach(function(account) {
+						- signon.forEach(function(account) {
 							tr
-								td= account.name
-								td.numeric= account.balance
-								td= account.date
+								td= account.user
 								td
-									button.change Change
+									button.action(name="change", value="Update") Change
 								td
-									button.delete Delete
-									input(type="hidden", name="name",      value: account.name)
-									input(type="hidden", name="action",    value="")
-									input(type="hidden", name="balance",   value: account.balance)
-									input(type="hidden", name="date",      value: account.date)
-									input(type="hidden", name="epoch",     value: account.epoch)
+									button.action(name="delete", value="Delete") Delete
+									input(type="hidden", name="user",      value: account.name)
+									input(type="hidden", name="anon",      value: account.anon)
+									input(type="hidden", name="pass")
 									input(type="hidden", name="id",        value: account._id)
 									input(type="hidden", name="group",     value: account.group)
 						- })
-.box1
+.box#expense
+	a(name="expense")
 	dl
-		dt
-			h3 Income and Expenses
-		dd
+		dt(name = "expense")
+			div.expander.float-left #{expander(prefs.style.expense)}
+			h2 Income and Expenses
+		dd(style: prefs.style.expense)
+			.help-text.float-right
+				span.highlight
+					span.bigger Step 2 / 3
+					p.tagline Tell us what payments you make and receive.
+					p.smaller Don't worry if you're not sure of the exact amounts now because you can easily change them later.
+					p.smaller This information is used to calculate how much money you will have but only in the future so don't
+						|  worry about past payments.
+					- if (expense)
+						p.smaller You can keep the amounts up-to-date by changing and deleting accounts in the table below.
+					- else
 			form#expense
-				table.box2.action
-					thead
-						tr
-							th.new(colspan='2') New
+				table.action
 					tbody
 						tr
 							td.label Type:
@@ -74,16 +100,16 @@ h2 Budget-Tracker
 									option(value="expense") Expense
 									option(value="income") Income
 						tr
-							td.label Name:
+							td.label Description:
 							td
-								input(name="name")
-								input(type="hidden", name="id", value="")
+								input(name="name", autofocus: prefs.autofocus == "expense", placeholder: !expense && "Shopping")
+								input(type="hidden", name="id")
 								input(type="hidden", name="action", value="add")
 								input(type="hidden", name="group",  value="expense")
 						tr
 							td.label Amount:
 							td
-								input(name="amount", type="number", step="0.01")
+								input(name="amount", type="number", step="0.01", placeholder="100.00")
 						tr
 							td.label Every:
 							td
@@ -91,7 +117,7 @@ h2 Budget-Tracker
 									option(value="once") Once
 									option(value="weekday") Weekday
 									option(value="day") Day
-									option(value="week") Week
+									option(value="week", selected) Week
 									option(value="fortnight") Fortnight
 									option(value="month") Month
 									option(value="quarter") Quarter
@@ -105,34 +131,37 @@ h2 Budget-Tracker
 						tr
 							td.label Upto Date:
 							td
-								input.date-picker(name="uptoDate")
+								input.date-picker(name="uptoDate", placeholder="(Optional)")
 								input(type="hidden", name="uptoEpoch")
 						tr
 							td.final(colspan="2")
 								input(name="submit", type="submit", value="Save")
-			- if (expenses.length)
-				table.box2.browse
+			- if (expense)
+				table.browse
 					thead
 						tr
 							th Name
-							th Type
+							th Income
 							th Amount
+							th Every
 							th From
 							th
 							th
+								button.action(name="add", value="Save") Add
+								input(type="hidden", name="group", value="expense")
 					tbody
-						- expenses.forEach(function(expense) {
+						- expense.forEach(function(expense) {
 						tr
 							td= expense.name
-							td= expense.type
+							td= expense.type == "income" ? "Yes" : ""
 							td.numeric= expense.amount
+							td= expense.frequency
 							td= expense.fromDate
 							td
-								button.change Change
+								button.action(name="change", value="Update") Change
 							td
-								button.delete Delete
+								button.action(name="delete", value="Delete") Delete
 								input(type="hidden", name="name",      value: expense.name)
-								input(type="hidden", name="action",    value="")
 								input(type="hidden", name="type",      value: expense.type)
 								input(type="hidden", name="amount",    value: expense.amount)
 								input(type="hidden", name="frequency", value: expense.frequency)
@@ -143,32 +172,102 @@ h2 Budget-Tracker
 								input(type="hidden", name="id",        value: expense._id)
 								input(type="hidden", name="group",     value: expense.group)
 						- })
-- if (totals.length)
-	.box1
+
+.box#bank
+	a(name="bank")
+	dl
+		dt(name = "bank")
+			div.expander.float-left #{expander(prefs.style.bank)}
+			h2 Bank Balance
+		dd(style: prefs.style.bank)
+			.help-text.float-right
+				span.highlight
+					span.bigger Step 3 / 3
+					p.tagline Tell us how much you have the bank.
+					p.smaller The balance should be the amount you have
+						|  on the date given after all payments have been made.
+					- if (bank)
+						p.smaller This doesn't just need to be bank accounts, you can also use cash and other assets.
+			form#bank
+				table.action
+					tbody
+						tr
+							td.label Description:
+							td
+								input(name="name", placeholder: !bank && "Savings", autofocus: prefs.autofocus == "bank")
+								input(type="hidden", name="id",      value="")
+								input(type="hidden", name="action",  value="add")
+								input(type="hidden", name="group",   value="bank")
+						tr
+							td.label Balance:
+							td
+								input(type="number", name="balance", step="0.01", placeholder="1000.00")
+						tr
+							td.label Date:
+							td
+								input.date-picker(name="date")
+								input(type="hidden", name="epoch")
+						tr
+							td.final(colspan="2")
+								input(name="submit", type="submit", value="Save")
+			- if (bank)
+				table.browse
+					thead
+						tr
+							th Name
+							th Balance
+							th Date
+							th
+							th
+								button.action(name="add", value="Save") Add
+								input(type="hidden", name="group",     value="bank")
+					tbody
+						- bank.forEach(function(account) {
+							tr
+								td= account.name
+								td.numeric= account.balance
+								td= account.date
+								td
+									button.action(name="change", value="Update") Change
+								td
+									button.action(name="delete", value="Delete") Delete
+									input(type="hidden", name="name",      value: account.name)
+									input(type="hidden", name="balance",   value: account.balance)
+									input(type="hidden", name="date",      value: account.date)
+									input(type="hidden", name="epoch",     value: account.epoch)
+									input(type="hidden", name="id",        value: account._id)
+									input(type="hidden", name="group",     value: account.group)
+						- })
+- if (totals)
+	a(name="totals")
+	.box#totals
 		dl
-			dt
-				h3 Totals
-			dd
-				table.box2.browse
+			dt(name = "totals")
+				div.expander.float-left #{expander(prefs.style.totals)}
+				h2 Totals
+			dd(style: prefs.style.totals)
+				.help-text.float-right
+					span.bigger Finished!
+					p.tagline Now you can see how much money you will have.
+					p.smaller The amounts are taken from when your bank balance was last updated.
+						|  Only payments after this date will be calculated.
+					p.smaller The balance is what you will have left once all payments have been made on that date.
+				table.browse
 					thead
 						tr
 							th Date
-							th Name
-							th Inc Today
-							th Exc Today
-					tbody
+							th Balance
+							th Spent
+					tbody#totals
+						- var balanceClass = function(amount) {
+						-		return "numeric" + (amount < 0 ? " negative" : "");
+						- };
 						- totals.forEach(function(total) {
 						tr
-							td= total.date
-							td= total.name
-							- if (total.including < 0) {
-								td.numeric.negative= total.including
-							- } else {
-								td.numeric= total.including
-							- }
-							- if (total.excluding < 0) {
-								td.numeric.negative= total.excluding
-							- } else {
-								td.numeric= total.excluding
-							- }
+							td.numeric
+								div
+									div= total.date
+							td(class= balanceClass(total.balance))= total.balance
+							td(class= balanceClass(total.payment))= total.payment
 						- })
+- else log("help...")
