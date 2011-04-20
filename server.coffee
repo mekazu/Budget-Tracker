@@ -217,7 +217,6 @@ signon = (row, ses, callback) ->
 					dislodge row, 'group'
 					dislodge row, 'account'
 					action = dislodge row, 'action'
-					look ses.account, "Session account: "
 					if ses.account.anon and ses.account._id
 						action = 'change'
 						dislodge ses.account, 'anon'
