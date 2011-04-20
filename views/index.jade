@@ -9,7 +9,7 @@
 	| Use this app to keep track of your expense and help figure out how
 	| much money you will have in the future.
 
-h1 Budget-Tracker
+h1 Budget Diary
 .box#signon
 	a(name="signon")
 	dl
@@ -40,8 +40,9 @@ h1 Budget-Tracker
 							td.label Username:
 							td
 								input(type="text",   name="user",    autofocus)
-								input(type="hidden", name="action",  value="add")
+								input(type="hidden", name="action",  value: autoRegister ? "change" : "add")
 								input(type="hidden", name="group",   value="signon")
+								input(type="hidden", name="id",      value: autoRegister & signon.length ? signon[0]._id : "")
 						tr
 							td.label Password:
 							td

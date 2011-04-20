@@ -1,8 +1,8 @@
 express			= require('express')
 sys					= require('sys')
 dateUtils		= require('date-utils')
-mongodb			= require('mongodb')
 util				= require('./server/util.js')
+mongodb			= require('mongodb')
 
 MongoDb			= mongodb.Db
 ObjectID		= mongodb.BSONNative.ObjectID
@@ -12,13 +12,12 @@ MONEY = "money"
 USER = "user"
 
 app = express.createServer()
-database = (host, port, database) ->
+Database = (host, port, database) ->
 	this.db = new MongoDb(database, new MongoServer(host, port, {auto_reconnect: true}, {}))
 	this.db.open ->
 		log "MongoDB Connected"
 
-db = new database("localhost", 27017, "budget").db
-
+db = new Database("localhost", 27017, "budget").db
 app.configure ->
 	app.use express.static(__dirname + '/public')
 	app.use express.bodyParser()
@@ -34,7 +33,7 @@ app.get '/', (req, res) ->
 	locals = {prefs: prefs, log: log, signon: [ses.account]}
 	render = ->
 		look locals, "Locals:"
-		res.render 'index.jade', {title: "Home", locals: locals}
+		res.render 'index.jade', {title: "Budget Diary", locals: locals}
 	if ses.account.anon and not ses.account._id
 		# Unregistered user who hasn't done anything yet
 		prefs.anon = ses.account.anon
@@ -49,7 +48,7 @@ app.get '/', (req, res) ->
 			list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
 				locals.expense = results
 				defineTotals locals
-				log "Here"
+				log "Defined locals"
 				render()
 
 initSession = (ses, prefs) ->
@@ -58,8 +57,10 @@ initSession = (ses, prefs) ->
 		ses.account = anon: ++indexCount, group: 'signon'
 		prefs.autofocus = 'signon'
 		log "New user: " + ses.account.anon
+	look ses.account, "Session Account:"
 
 app.post "/balance", (req, res) ->
+	debugger
 	prefs = preferences req
 	ses = req.session
 	initSession(ses, prefs)
@@ -92,7 +93,7 @@ app.post "/balance", (req, res) ->
 				res.send('')
 			else
 				persist row, MONEY, action, (err, docs) ->
-					log "Responding"
+					log err if err
 					res.send(if err then "Data Error: " + err else '')
 
 app.post "/toggle", (req, res) ->
@@ -163,10 +164,10 @@ validate = (row, ses, callback) ->
 	if not err = delimit ", ", typeCheck row
 		row.unique = {account: row.account}
 		if row.group == 'signon'
-			row.unique.user = row.user
-			#this needs to be change. Do this on client size through the form.
+			row.unique = user: row.user
 			if row.action != 'add'
-				row.unique._id = $ne : row.key._id
+				row.unique._id = $ne : new ObjectID row.account
+			look row, "Validating Signon: "
 		else if ses.account.anon and not row.account
 			delay = true
 			tempSignon ses, (err, account) ->
@@ -214,15 +215,20 @@ signon = (row, ses, callback) ->
 					callback err.message
 				else
 					dislodge row, 'group'
-					dislodge row.account
+					dislodge row, 'account'
 					action = dislodge row, 'action'
+					look ses.account, "Session account: "
 					if ses.account.anon and ses.account._id
 						action = 'change'
-						dislodge ses.account.anon
-						row._id = ses.account._id
-						row.key = {id: row._id}
+						dislodge ses.account, 'anon'
+						row._id = new ObjectID ses.account._id
+						log "Type of ses.account._id: " + typeof ses.account._id
+						row.key = {_id: new ObjectID row._id}
+					else
+						action = 'add'
+					look row, "About to " + action + " registration for user:"
 					persist row, USER, action, (err, docs) ->
-						if err instanceof Error
+						if err || err instanceof Error
 							callback err
 						else
 							signon row, ses, callback
@@ -236,7 +242,7 @@ defineTotals = (locals) ->
 		bank = balance: sum locals.bank, 'balance'
 		locals.totals = [bank]
 		total = 0
-		for i in [1..5]
+		for i in [1..50]
 			before = nextIncrement after, i
 			amount = sumEachExpense locals.expense, after, before
 			if amount != 0
@@ -312,10 +318,8 @@ sumExpense = (expense, after, before) ->
 	total = 0
 	next = dateOf expense.fromEpoch
 	upto = dateOf expense.uptoEpoch
-	log "Next: " + next + " Upto: " + upto
 	while next and next < before and (!upto or next <= upto)
 		if next >= after
-			log "Next: " + next
 			total += negafyExpense expense
 		switch expense.frequency
 			when "day" then next.addDays(1)
@@ -397,13 +401,12 @@ ensureUnique = (connection, qualifier, callback) ->
 	if qualifier
 		look qualifier, "Qualifier: "
 		connection.count [qualifier], (err, count) ->
-			log 1
 			callback(err, count)
-		log 3
 	else
 		callback(null, 0)
 
 persist = (row, table, action, callback) ->
+	look row, "About to " + action + " in " + table + ":"
 	key = dislodge row, 'key'
 	unique = dislodge row, 'unique'
 	final = (err, docs) ->
@@ -424,6 +427,8 @@ persist = (row, table, action, callback) ->
 				else
 					callback "Found " + count + " duplicate key on insert"
 		else if action == 'change'
+			look key, "Type of key: " + typeof key
+			look key.id, "Type of id: " + (typeof key.id) if key.id
 			c.findOne key, (err, doc) ->
 				if look doc, "Before Update:"
 					ensureUnique c, unique, (err, count) ->
