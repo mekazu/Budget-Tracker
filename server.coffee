@@ -222,8 +222,7 @@ signon = (row, ses, callback) ->
 						action = 'change'
 						dislodge ses.account, 'anon'
 						row._id = new ObjectID ses.account._id
-						log "Type of ses.account._id: " + typeof ses.account._id
-						row.key = {_id: new ObjectID row._id}
+						row.key = {_id: row._id}
 					else
 						action = 'add'
 					look row, "About to " + action + " registration for user:"
