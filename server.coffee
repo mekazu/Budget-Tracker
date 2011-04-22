@@ -188,8 +188,11 @@ validate = (row, ses, callback) ->
 			if row.action != 'add'
 				row.unique._id = $ne : row.key._id
 	if not delay
-		dislodge row, 'action'
 		callback err, row
+
+###
+Signon Action
+###
 
 tempSignon = (ses, callback) ->
 	dirty = {anon: ses.account.anon}
@@ -208,31 +211,36 @@ signon = (row, ses, callback) ->
 			ses.account.group = 'signon'
 			callback null, account.user
 		else if register and register == 'on'
+			###
+			# TODO this works for add, but change needs to use the persist mechanism
+			# Find a way to validate existing using persist.
+			# Ok so we'll just skip this findOne business and
+			# use row.unique to ignore the current account username
 			findOne {user: row.user}, USER, (err, account) ->
 				if account
 					callback "This username is taken, please choose a different one"
 				else if err instanceof Error
 					callback err.message
 				else
-					dislodge row, 'group'
-					dislodge row, 'account'
-					action = dislodge row, 'action'
-					if ses.account.anon and ses.account._id
-						action = 'change'
-						dislodge ses.account, 'anon'
-						row._id = new ObjectID ses.account._id
-						row.key = {_id: row._id}
-					else
-						action = 'add'
-					look row, "About to " + action + " registration for user:"
-					persist row, USER, action, (err, docs) ->
-						if err || err instanceof Error
-							callback err
-						else
-							signon row, ses, callback
+			###
+			dislodge row, 'group'
+			dislodge row, 'account'
+			action = dislodge row, 'action'
+			if ses.account._id
+				row._id = new ObjectID ses.account._id
+				row.key = {_id: row._id}
+			look row, "About to " + action + " registration for user:"
+			persist row, USER, action, (err, docs) ->
+				if err || err instanceof Error
+					callback err
+				else
+					signon row, ses, callback
 		else
 			callback "Username password combination incorrect"
 
+###
+Summary Logic
+###
 defineTotals = (locals) ->
 	currentBank = max(locals.bank, 'epoch')
 	if currentBank
@@ -262,7 +270,6 @@ nextIncrement = (after, i) ->
 		next.addMonths 1
 	else
 		next.addYears 1
-
 
 pad = (str, length) ->
 	str = String(str);
@@ -329,7 +336,7 @@ sumExpense = (expense, after, before) ->
 			when "half" then next.addMonths(6)
 			when "year" then next.addYears(1)
 			else next = false
-	log tidyFloat total, "Total: "
+	tidyFloat total
 
 addWeekDays = (date, n) ->
 	date.addDays(n)
@@ -347,6 +354,15 @@ sum = (list, p, negKey, negVal, epoch) ->
 			balance += negafy obj, negKey, negVal, amount
 	tidyFloat balance
 
+negafy = (obj, negKey, negVal, amount) ->
+	if negKey and negVal and obj[negKey] == negVal
+		amount * -1
+	else
+		amount
+
+###
+Strings
+###
 didFloat = (obj, property) ->
 	obj and property and obj[property] and makeFloat obj, property
 
@@ -369,17 +385,19 @@ makeInt = (obj, property) ->
 			obj[property] = parseInt(obj[property])
 	ok
 
-negafy = (obj, negKey, negVal, amount) ->
-	if negKey and negVal and obj[negKey] == negVal
-		amount * -1
-	else
-		amount
+###
+Objects
+###
 
 dislodge = (obj, property) ->
 	value = obj[property]
 	delete obj[property]
 	value
 
+
+###
+Data
+###
 findOne = (key, table, callback) ->
 	look key, "Looking in " + table + " for: "
 	db.collection table, (err, c) ->
@@ -404,9 +422,13 @@ ensureUnique = (connection, qualifier, callback) ->
 		callback(null, 0)
 
 persist = (row, table, action, callback) ->
+	rowAction = dislodge row, 'action'
+	log "Passed action: " + action + ", Row action: " + rowAction if rowAction and rowAction != action
 	look row, "About to " + action + " in " + table + ":"
 	key = dislodge row, 'key'
+	look key, "Key used to determine which doc to " + action + ":"
 	unique = dislodge row, 'unique'
+	look unique, "Will not update if this (unique search) exists:"
 	final = (err, docs) ->
 		if err
 			look err, "Error in Persisting:"
@@ -454,5 +476,8 @@ persist = (row, table, action, callback) ->
 		else
 			callback("Action: " + action + " not understood.");
 
+###
+Debug
+###
 log = util.log
 look = util.look

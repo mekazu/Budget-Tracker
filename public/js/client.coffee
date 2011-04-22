@@ -54,7 +54,6 @@ toggleDD = (dd) ->
 	$.post "/toggle", {name: dt.attr("name"), visible: visible}, (err) ->
 		log err if err
 
-
 submitForm = (form) ->
 	try
 		inputData = $(form).find(":input").serializeArray();
@@ -81,7 +80,7 @@ findModifyActionHiddenInputs = (clicked) ->
 
 copyDataToAction = (data, clicked) ->
 	mapHidden(data, findModifyActionHiddenInputs clicked)
-	log form = "#" + data.group, "Group"
+	log form = "form#" + data.group, "Group"
 	$(form)[0].reset() if data.action == 'add'
 	mergeAttributes data, $(":input", form)
 	log tbody = $("tbody", form).show()
