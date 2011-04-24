@@ -32,7 +32,6 @@ app.get '/', (req, res) ->
 	initSession(ses, prefs)
 	locals = {prefs: prefs, log: log, signon: [ses.account]}
 	render = ->
-		look locals, "Locals:"
 		res.render 'index.jade', {title: "Budget Diary", locals: locals}
 	if ses.account.anon and not ses.account._id
 		# Unregistered user who hasn't done anything yet
@@ -69,6 +68,10 @@ app.post "/balance", (req, res) ->
 	id = dislodge p, 'id'
 	look (p.key = _id : new ObjectID id), "Key definition:" if id
 	action = p.action
+	doSignoff = ->
+		prefs.autofocus = "signon"
+		ses.destroy()
+		res.send('')
 	if ses.account
 		p.account = ses.account._id
 	validate p, ses, (err, row) ->
@@ -80,17 +83,18 @@ app.post "/balance", (req, res) ->
 				signon row, ses, (err, user) ->
 					if err
 						err = "Signon Error: " + err
+						res.send(err)
+					else if action == 'delete'
+						doSignoff()
 					else
 						visible prefs, false, 'signon'
 						visible prefs, true, 'bank'
 						visible prefs, true, 'expense'
 						visible prefs, true, 'totals'
 						prefs.autofocus = 'expense'
-					res.send(err)
+						res.send('')
 			else if row.group == "signoff"
-				prefs.autofocus = "signon"
-				ses.destroy()
-				res.send('')
+				doSignoff()
 			else
 				persist row, MONEY, action, (err, docs) ->
 					log err if err
@@ -211,18 +215,6 @@ signon = (row, ses, callback) ->
 			ses.account.group = 'signon'
 			callback null, account.user
 		else if register and register == 'on'
-			###
-			# TODO this works for add, but change needs to use the persist mechanism
-			# Find a way to validate existing using persist.
-			# Ok so we'll just skip this findOne business and
-			# use row.unique to ignore the current account username
-			findOne {user: row.user}, USER, (err, account) ->
-				if account
-					callback "This username is taken, please choose a different one"
-				else if err instanceof Error
-					callback err.message
-				else
-			###
 			dislodge row, 'group'
 			dislodge row, 'account'
 			action = dislodge row, 'action'
@@ -233,6 +225,8 @@ signon = (row, ses, callback) ->
 			persist row, USER, action, (err, docs) ->
 				if err || err instanceof Error
 					callback err
+				else if action == 'delete'
+					callback null
 				else
 					signon row, ses, callback
 		else
@@ -250,13 +244,14 @@ defineTotals = (locals) ->
 		total = 0
 		for i in [1..50]
 			before = nextIncrement after, i
-			amount = sumEachExpense locals.expense, after, before
-			if amount != 0
-				total += amount
+			data = sumEachExpense locals.expense, after, before
+			if data.sum != 0
+				total += data.sum
 				weekNext =
-					payment: tidyFloat amount * -1
+					payment: tidyFloat data.sum * -1
 					balance: tidyFloat total + bank.balance
 					date: formatDate after
+					items: data.items
 				locals.totals.push(weekNext)
 			after = before
 
@@ -307,9 +302,20 @@ sumEachExpense = (expenses, after, before) ->
 	result: Integer
 	###
 	total = 0
+	items = []
 	for expense in expenses
-		total += sumExpense expense, after, before
-	tidyFloat total
+		###
+		TODO It would be helpful to have a mechanism to record how many
+		occurances of each expense there are. This needs to be done in
+		sumExpense but we cannot attach it to the expense itself. Clone
+		or create a new object that records the expense and the number
+		of occurances.
+		###
+		data = sumExpense expense, after, before
+		if data.sum != 0
+			total += data.sum
+			items.push {expense: expense, occurances: data.occurances}
+	sum: tidyFloat(total), items: items
 
 sumExpense = (expense, after, before) ->
 	###
@@ -321,11 +327,13 @@ sumExpense = (expense, after, before) ->
 		.type: String - If expense then amount is made negative (otherwise considered income)
 	###
 	total = 0
+	occurances = 0
 	next = dateOf expense.fromEpoch
 	upto = dateOf expense.uptoEpoch
 	while next and next < before and (!upto or next <= upto)
 		if next >= after
 			total += negafyExpense expense
+			occurances++;
 		switch expense.frequency
 			when "day" then next.addDays(1)
 			when "weekday" then addWeekDays(next, 1)
@@ -336,7 +344,7 @@ sumExpense = (expense, after, before) ->
 			when "half" then next.addMonths(6)
 			when "year" then next.addYears(1)
 			else next = false
-	tidyFloat total
+	sum: tidyFloat(total), occurances: occurances
 
 addWeekDays = (date, n) ->
 	date.addDays(n)

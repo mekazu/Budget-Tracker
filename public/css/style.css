@@ -127,6 +127,10 @@ div.expander {
 	padding-right: 2px;
 }
 
+.formattedDate {
+	width: 100px;
+}
+
 .negative {
 	color: red;
 }

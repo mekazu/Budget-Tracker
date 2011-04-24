@@ -259,16 +259,21 @@ h1 Budget Diary
 							th Date
 							th Balance
 							th Spent
+							th Items
 					tbody#totals
 						- var balanceClass = function(amount) {
 						-		return "numeric" + (amount < 0 ? " negative" : "");
 						- };
 						- totals.forEach(function(total) {
 						tr
-							td.numeric
-								div
-									div= total.date
+							td.numeric.formattedDate #{total.date}
 							td(class= balanceClass(total.balance))= total.balance
 							td(class= balanceClass(total.payment))= total.payment
+							td
+								- if (total.items) {
+									- total.items.forEach(function(item) {
+										#{item.occurances}x #{item.expense.name} #{item.expense.amount},
+									- });
+								- };
 						- })
 - else log("help...")
