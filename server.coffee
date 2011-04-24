@@ -4,25 +4,23 @@ dateUtils		= require('date-utils')
 util				= require('./server/util.js')
 mongodb			= require('mongodb')
 
-MongoDb			= mongodb.Db
+MONEY 			= "money"
+USER				= "user"
+
 ObjectID		= mongodb.BSONNative.ObjectID
-MongoServer = mongodb.Server
-
-MONEY = "money"
-USER = "user"
-
-app = express.createServer()
 Database = (host, port, database) ->
-	this.db = new MongoDb(database, new MongoServer(host, port, {auto_reconnect: true}, {}))
+	this.db = new mongodb.Db(database, new mongodb.Server(host, port, {auto_reconnect: true}, {}))
 	this.db.open ->
 		log "MongoDB Connected"
 
-db = new Database("localhost", 27017, "budget").db
+app = express.createServer()
 app.configure ->
 	app.use express.static(__dirname + '/public')
 	app.use express.bodyParser()
 	app.use express.cookieParser()
 	app.use express.session(secret: "Ci93kLKjvlk3l2jcXK3k")
+
+db = new Database("localhost", 27017, "budget").db
 
 indexCount = 0;
 app.get '/', (req, res) ->
@@ -130,18 +128,29 @@ validation =
 	signon :
 		user : {name: "Username", required: true}
 		pass : {name: "Password", required: true}
+		anon : {name: "Guest"}
 	bank :
 		name		: {name: "Name",		required: true}
 		balance : {name: "Balance", required: true, beFloat: true}
-		epoch		: {name: "Date",		required: true,	 beInt: true}
+		epoch		: {name: "Epoch",		required: true,	 beInt: true}
+		date    : {name: "Date",    required: true}
+		account : {name: "Account", required: true}
+		group   : {name: "Group",   required: true}
 	expense :
 		name			: {name: "Name",			 required: true}
 		amount		: {name: "Amount",		 required: true, beFloat: true}
-		fromEpoch : {name: "From Date",	 required: true,	 beInt: true}
-		uptoEpoch : {name: "Upto Date",	 required: false,	 beInt: true}
+		fromDate  : {name: "From Date",	 required: false}
+		uptoDate  : {name: "Upto Date",	 required: false}
+		fromEpoch : {name: "From Epoch", required: true,	 beInt: true}
+		uptoEpoch : {name: "Upto Epoch", required: false,	 beInt: true}
+		account   : {name: "Account",    required: true}
+		frequency : {name: "Frequency",  required: true}
+		group     : {name: "Group",      required: true}
+		type      : {name: "Type",       required: true}
 
 typeCheck = (row) ->
 	messages = []
+	row.doc = {}
 	for group, fields of validation
 		if row.group == group and row.action != 'delete'
 			for field, needs of fields
@@ -152,6 +161,7 @@ typeCheck = (row) ->
 					messages.push "The " + needs.name + " must be numeric"
 				else if needs.beInt and not makeInt row, field
 					messages.push "The " + needs.name + " must be a whole number"
+				row.doc[field] = row[field]
 	messages
 
 
@@ -199,7 +209,7 @@ Signon Action
 ###
 
 tempSignon = (ses, callback) ->
-	dirty = {anon: ses.account.anon}
+	dirty = {doc: {anon: ses.account.anon}}
 	persist dirty, USER, 'add', (err, docs) ->
 		if err or docs.legnth < 1
 			callback "Sorry, there was a problem: " + (err or "nothing saved")
@@ -432,7 +442,7 @@ ensureUnique = (connection, qualifier, callback) ->
 persist = (row, table, action, callback) ->
 	rowAction = dislodge row, 'action'
 	log "Passed action: " + action + ", Row action: " + rowAction if rowAction and rowAction != action
-	look row, "About to " + action + " in " + table + ":"
+	look row.doc, "About to " + action + " in " + table + ":"
 	key = dislodge row, 'key'
 	look key, "Key used to determine which doc to " + action + ":"
 	unique = dislodge row, 'unique'
@@ -451,7 +461,7 @@ persist = (row, table, action, callback) ->
 				if err instanceof Error
 					callback err.message
 				else if count < 1
-					c.insert [row], final
+					c.insert [row.doc], final
 				else
 					callback "Found " + count + " duplicate key on insert"
 		else if action == 'change'
@@ -463,7 +473,7 @@ persist = (row, table, action, callback) ->
 						if err instanceof Error
 							callback err.message
 						if count < 1
-							c.update key, row, {safe: true}, final
+							c.update key, row.doc, {safe: true}, final
 						else
 							callback "Found " + count + " duplicate key on insert"
 				else
@@ -471,8 +481,8 @@ persist = (row, table, action, callback) ->
 		else if action == 'replace'
 			c.findOne key, (err, doc) ->
 				if look doc, "Before Replace:"
-					row._id = doc._id
-					c.update key, row, {safe: true}, final
+					row.doc._id = doc._id
+					c.update key, row.doc, {safe: true}, final
 				else
 					callback("Could not find the doc to update", null);
 		else if action == 'delete'
