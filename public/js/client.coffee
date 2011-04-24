@@ -62,9 +62,7 @@ submitForm = (form) ->
 			if err && err != ''
 				alert err
 			else
-				log "Got response from form submit. Reloading."
-				window.location.href = window.location.pathname + "#" + log $(form).attr("id")
-				window.location.reload(true);
+				window.location.href = window.location.pathname
 		false
 	catch e
 		log e
