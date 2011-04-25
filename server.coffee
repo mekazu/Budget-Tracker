@@ -1,36 +1,40 @@
-# Minor change
+# Require
 express			= require('express')
 sys					= require('sys')
 dateUtils		= require('date-utils')
 util				= require('./server/util.js')
 mongodb			= require('mongodb')
 
-MongoDb			= mongodb.Db
-ObjectID		= mongodb.BSONNative.ObjectID
-MongoServer = mongodb.Server
-
-MONEY = "money"
-USER = "user"
-
-app = express.createServer()
+# Classes
+ObjectID = mongodb.BSONNative.ObjectID
 Database = (host, port, database) ->
-	this.db = new MongoDb(database, new MongoServer(host, port, {auto_reconnect: true}, {}))
+	this.db = new mongodb.Db(database, new mongodb.Server(host, port, {auto_reconnect: true}, {}))
 	this.db.open ->
 		log "MongoDB Connected"
 
+# Final
+MONEY 			= "money"
+USER				= "user"
+
+# Global
 db = new Database("localhost", 27017, "budget").db
+indexCount = 0
+
+###
+Web Server
+###
+app = express.createServer()
 app.configure ->
 	app.use express.static(__dirname + '/public')
 	app.use express.bodyParser()
 	app.use express.cookieParser()
 	app.use express.session(secret: "Ci93kLKjvlk3l2jcXK3k")
 
-indexCount = 0;
 app.get '/', (req, res) ->
 	# Prefs are stored in session and relayed to locals
 	prefs = preferences req
 	ses = req.session
-	initSession(ses, prefs)
+	initSession ses, prefs
 	locals = {prefs: prefs, log: log, signon: [ses.account]}
 	render = ->
 		res.render 'index.jade', {title: "Budget Diary", locals: locals}
@@ -40,9 +44,7 @@ app.get '/', (req, res) ->
 		render()
 	else
 		# User with something to display (not ses.account.anon or ses.account._id)
-		if ses.account.user
-			# Registered User
-			prefs.user = ses.account.user
+		prefs.user = ses.account.user if ses.account.user # Registered User
 		list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
 			locals.bank = results
 			list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
@@ -60,32 +62,29 @@ initSession = (ses, prefs) ->
 	look ses.account, "Session Account:"
 
 app.post "/balance", (req, res) ->
-	debugger
 	prefs = preferences req
 	ses = req.session
 	initSession(ses, prefs)
 	look p = req.body, "The form sent to balance:"
 	# If not insert the form sends an id that we convert to an ObjectID and set to p.key
-	id = dislodge p, 'id'
-	look (p.key = _id : new ObjectID id), "Key definition:" if id
-	action = p.action
+	look (p.key = _id : new ObjectID p.id), "Key definition:" if p.id
 	doSignoff = ->
 		prefs.autofocus = "signon"
 		ses.destroy()
 		res.send('')
 	if ses.account
 		p.account = ses.account._id
-	validate p, ses, (err, row) ->
+	validate p, ses, (err, prm) ->
 		if err
 			res.send("Validation Error: " + log err)
 		else
-			prefs.autofocus = row.group
-			if row.group == 'signon'
-				signon row, ses, (err, user) ->
+			prefs.autofocus = prm.group
+			if prm.group == 'signon'
+				signon prm, ses, (err, user) ->
 					if err
 						err = "Signon Error: " + err
 						res.send(err)
-					else if action == 'delete'
+					else if p.action == 'delete'
 						doSignoff()
 					else
 						visible prefs, false, 'signon'
@@ -94,10 +93,10 @@ app.post "/balance", (req, res) ->
 						visible prefs, true, 'totals'
 						prefs.autofocus = 'expense'
 						res.send('')
-			else if row.group == "signoff"
+			else if prm.group == "signoff"
 				doSignoff()
 			else
-				persist row, MONEY, action, (err, docs) ->
+				persist prm, MONEY, (err, docs) ->
 					log err if err
 					res.send(if err then "Data Error: " + err else '')
 
@@ -112,13 +111,6 @@ visible = (prefs, visible, name) ->
 	else
 		prefs.style[name] = "display: none;"
 
-init = (obj, p, as) ->
-	property = obj[p]
-	if not property
-		property = if as? then as else {}
-		obj[p] = property
-	property
-
 preferences = (req) ->
 	prefs = init req.session, 'preferences'
 	init prefs, 'style'
@@ -126,35 +118,15 @@ preferences = (req) ->
 
 app.listen(8743)
 
-# Structure {group: {field: {needs: needs}}}
-validation =
-	signon :
-		user : {name: "Username", required: true}
-		pass : {name: "Password", required: true}
-	bank :
-		name		: {name: "Name",		required: true}
-		balance : {name: "Balance", required: true, beFloat: true}
-		epoch		: {name: "Date",		required: true,	 beInt: true}
-	expense :
-		name			: {name: "Name",			 required: true}
-		amount		: {name: "Amount",		 required: true, beFloat: true}
-		fromEpoch : {name: "From Date",	 required: true,	 beInt: true}
-		uptoEpoch : {name: "Upto Date",	 required: false,	 beInt: true}
-
-typeCheck = (row) ->
-	messages = []
-	for group, fields of validation
-		if row.group == group and row.action != 'delete'
-			for field, needs of fields
-				row[field] = row[field].trim() if row[field] and row[field] instanceof String
-				if needs.required and not row[field]
-					messages.push "The " + needs.name + " is a required field"
-				if needs.beFloat and not makeFloat row, field
-					messages.push "The " + needs.name + " must be numeric"
-				else if needs.beInt and not makeInt row, field
-					messages.push "The " + needs.name + " must be a whole number"
-	messages
-
+###
+Objects
+###
+init = (obj, p, as) ->
+	property = obj[p]
+	if not property
+		property = if as? then as else {}
+		obj[p] = property
+	property
 
 delimit = (del, list) ->
 	str = ""
@@ -164,72 +136,108 @@ delimit = (del, list) ->
 		d = del
 	str
 
-validate = (row, ses, callback) ->
-	delay = false
-	if not err = delimit ", ", typeCheck row
-		row.unique = {account: row.account}
-		if row.group == 'signon'
-			row.unique = user: row.user
-			if row.action != 'add'
-				row.unique._id = $ne : new ObjectID row.account
-			look row, "Validating Signon: "
-		else if ses.account.anon and not row.account
-			delay = true
-			tempSignon ses, (err, account) ->
-				if err
-					callback err
-				else
-					# Not sure if this is the 'right' way to get ObjectID string
-					row.account = account._id.toString()
-					row.unique.account = row.account
-					look row, "New user with account: " + row.account + " Revalidating row: "
-					validate row, ses, callback
-		else if row.group == 'bank'
-			if row.action != 'add'
-				row.unique._id = $ne : row.key._id
-			row.unique.name = row.name
-		else if row.group == 'expense'
-			row.unique = name : row.name, epoch : row.fromEpoch
-			if row.action != 'add'
-				row.unique._id = $ne : row.key._id
-	if not delay
-		callback err, row
+###
+Validation
+Structure: {group: {field: {needs: needs}}}
+###
+validation =
+	signon :
+		user : {name: "Username", required: true}
+		pass : {name: "Password", required: true}
+		anon : {name: "Guest"}
+	bank :
+		name		: {name: "Name",		required: true}
+		balance : {name: "Balance", required: true, beFloat: true}
+		epoch		: {name: "Epoch",		required: true,	 beInt: true}
+		date    : {name: "Date",    required: true}
+		account : {name: "Account", required: false}
+		group   : {name: "Group",   required: true}
+	expense :
+		name			: {name: "Name",			 required: true}
+		amount		: {name: "Amount",		 required: true, beFloat: true}
+		fromDate  : {name: "From Date"}
+		uptoDate  : {name: "Upto Date"}
+		fromEpoch : {name: "From Epoch", required: true,	 beInt: true}
+		uptoEpoch : {name: "Upto Epoch",    beInt: true}
+		account   : {name: "Account",    required: false}
+		frequency : {name: "Frequency",  required: true}
+		group     : {name: "Group",      required: true}
+		type      : {name: "Type",       required: true}
+
+typeCheck = (prm) ->
+	messages = []
+	prm.doc = {}
+	for group, fields of validation
+		if prm.group == group and prm.action != 'delete'
+			for field, needs of fields
+				prm[field] = prm[field].trim() if prm[field] and prm[field] instanceof String
+				if needs.required and not prm[field]
+					messages.push "The " + needs.name + " is a required field"
+				if needs.beFloat and not makeFloat prm, field
+					messages.push "The " + needs.name + " must be numeric"
+				else if needs.beInt and not makeInt prm, field
+					messages.push "The " + needs.name + " must be a whole number"
+				prm.doc[field] = prm[field]
+	messages
+
+validate = (prm, ses, callback) ->
+	if err = delimit ", ", typeCheck prm
+		callback err
+	else if prm.group != 'signon' and ses.account.anon and not prm.account
+		tempSignon ses, (err, account) ->
+			return callback err if err
+			# Not sure if this is the 'right' way to get ObjectID string
+			prm.account = account._id.toString()
+			# huh?: prm.unique.account = prm.account
+			look prm, "New user with account: " + prm.account + " Revalidating prm: "
+			validate prm, ses, callback
+	else
+		switch prm.group
+			when 'signon'  then prm.unique = user: prm.user
+			when 'bank'    then prm.unique = user: prm.user, account: prm.account
+			when 'expense' then prm.unique = name: prm.name, account: prm.account, epoch: prm.fromEpoch
+		if prm.action != 'add'
+			switch prm.group
+				when 'signon'  then prm.unique._id = $ne : new ObjectID prm.account
+				when 'bank'    then prm.unique._id = $ne : prm.key._id
+				when 'expense' then prm.unique._id = $ne : prm.key._id
+		callback err, prm
 
 ###
-Signon Action
+# Signon
 ###
-
 tempSignon = (ses, callback) ->
-	dirty = {anon: ses.account.anon}
-	persist dirty, USER, 'add', (err, docs) ->
+	dirty = {doc: {anon: ses.account.anon}, action: 'add'}
+	persist dirty, USER, (err, docs) ->
 		if err or docs.legnth < 1
 			callback "Sorry, there was a problem: " + (err or "nothing saved")
 		else
 			ses.account = docs[0]
 			callback false, ses.account
 
-signon = (row, ses, callback) ->
-	register = dislodge(row, 'register')
-	findOne {user: row.user, pass: row.pass}, USER, (err, account) ->
+###
+# If the user makes a mistake by logging in when the register checkbox
+# has already been checked then they are logged in if the password is correct.
+###
+signon = (p, ses, callback) ->
+	register = dislodge p, 'register'
+	findOne {user: p.user, pass: p.pass}, USER, (err, account) ->
 		if account
 			ses.account = account;
-			ses.account.group = 'signon'
+			ses.account.group = 'signon' #
 			callback null, account.user
 		else if register and register == 'on'
-			dislodge row, 'group'
-			dislodge row, 'account'
-			action = dislodge row, 'action'
 			if ses.account._id
-				row._id = new ObjectID ses.account._id
-				row.key = {_id: row._id}
-			look row, "About to " + action + " registration for user:"
-			persist row, USER, action, (err, docs) ->
+				p._id = new ObjectID ses.account._id
+				p.key = {_id: p._id}
+			look p, "About to " + p.action + " registration for user:"
+			persist p, USER, (err, docs) ->
 				if err || err instanceof Error
 					callback err
-				else if action == 'delete'
+				else if p.action == 'delete'
 					callback null
 				else
-					signon row, ses, callback
+					signon p, ses, callback
 		else
 			callback "Username password combination incorrect"
 
@@ -295,38 +303,33 @@ max = (list, p) ->
 			log "Expected number: " + p + " is " + obj[p]
 	top
 
+###
+# expense: Expense
+# after: Date
+# before: Date
+# result: Integer
+###
 sumEachExpense = (expenses, after, before) ->
-	###
-	expense: Expense
-	after: Date
-	before: Date
-	result: Integer
-	###
 	total = 0
 	items = []
 	for expense in expenses
-		###
-		TODO It would be helpful to have a mechanism to record how many
-		occurances of each expense there are. This needs to be done in
-		sumExpense but we cannot attach it to the expense itself. Clone
-		or create a new object that records the expense and the number
-		of occurances.
-		###
 		data = sumExpense expense, after, before
 		if data.sum != 0
 			total += data.sum
 			items.push {expense: expense, occurances: data.occurances}
 	sum: tidyFloat(total), items: items
 
+###
+# after: Date
+# before: Date
+# expense must implement:
+# 	.frequency: String - Either day, week, fortnight, month, quarter, half, year
+# 	.amount: Float - The amount for each frequency
+# 	.fromEpoch: Int - The amount the expense started. Epoch is seconds since 1970 (not millis)
+# 	.uptoEpoch: Int - (optional) When the frequency of the expense terminates (including)
+# 	.type: String - If expense then amount is made negative (otherwise considered income)
+###
 sumExpense = (expense, after, before) ->
-	###
-	After and Before are both javascript Date objects. Expense must implement:
-		.frequency: String - Either day, week, fortnight, month, quarter, half, year
-		.amount: Float - The amount for each frequency
-		.fromEpoch: Int - The amount the expense started. Epoch is seconds since 1970 (not millis)
-		.uptoEpoch: Int - (optional) When the frequency of the expense terminates (including)
-		.type: String - If expense then amount is made negative (otherwise considered income)
-	###
 	total = 0
 	occurances = 0
 	next = dateOf expense.fromEpoch
@@ -397,7 +400,6 @@ makeInt = (obj, property) ->
 ###
 Objects
 ###
-
 dislodge = (obj, property) ->
 	value = obj[property]
 	delete obj[property]
@@ -430,60 +432,56 @@ ensureUnique = (connection, qualifier, callback) ->
 	else
 		callback(null, 0)
 
-persist = (row, table, action, callback) ->
-	rowAction = dislodge row, 'action'
-	log "Passed action: " + action + ", Row action: " + rowAction if rowAction and rowAction != action
-	look row, "About to " + action + " in " + table + ":"
-	key = dislodge row, 'key'
-	look key, "Key used to determine which doc to " + action + ":"
-	unique = dislodge row, 'unique'
-	look unique, "Will not update if this (unique search) exists:"
+persist = (p, table, callback) ->
+	look p.doc, "About to " + p.action + " in " + table + ":"
+	look p.key, "Key used to determine which doc to " + p.action + ":"
+	look p.unique, "Will not update if this (unique search) exists:"
 	final = (err, docs) ->
 		if err
 			look err, "Error in Persisting:"
-			look row, "Failed to save:"
+			look p, "Failed to save:"
 		else
 			look docs, "Saved:"
 		callback(err, docs) if callback
 	db.collection table, (err, c) ->
 		callback(err.message) if err instanceof Error
-		if action == 'add'
-			ensureUnique c, unique, (err, count) ->
+		if p.action == 'add'
+			ensureUnique c, p.unique, (err, count) ->
 				if err instanceof Error
 					callback err.message
 				else if count < 1
-					c.insert [row], final
+					c.insert [p.doc], final
 				else
 					callback "Found " + count + " duplicate key on insert"
-		else if action == 'change'
-			look key, "Type of key: " + typeof key
-			look key.id, "Type of id: " + (typeof key.id) if key.id
-			c.findOne key, (err, doc) ->
+		else if p.action == 'change'
+			look p.key, "Type of key: " + typeof p.key
+			look p.key.id, "Type of id: " + (typeof p.key.id) if p.key.id
+			c.findOne p.key, (err, doc) ->
 				if look doc, "Before Update:"
-					ensureUnique c, unique, (err, count) ->
+					ensureUnique c, p.unique, (err, count) ->
 						if err instanceof Error
 							callback err.message
 						if count < 1
-							c.update key, row, {safe: true}, final
+							c.update p.key, p.doc, {safe: true}, final
 						else
 							callback "Found " + count + " duplicate key on insert"
 				else
 					callback("Could not find the doc to update", null);
-		else if action == 'replace'
-			c.findOne key, (err, doc) ->
+		else if p.action == 'replace'
+			c.findOne p.key, (err, doc) ->
 				if look doc, "Before Replace:"
-					row._id = doc._id
-					c.update key, row, {safe: true}, final
+					p.doc._id = doc._id
+					c.update p.key, p.doc, {safe: true}, final
 				else
 					callback("Could not find the doc to update", null);
-		else if action == 'delete'
-			c.findOne key, (err, doc) ->
+		else if p.action == 'delete'
+			c.findOne p.key, (err, doc) ->
 				if look doc, "Before delete"
 					c.remove doc, {safe: true}, final
 				else
 					callback("Could not find the doc to delete", null);
 		else
-			callback("Action: " + action + " not understood.");
+			callback("Action: " + p.action + " not understood.");
 
 ###
 Debug
