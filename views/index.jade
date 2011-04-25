@@ -32,7 +32,7 @@ h1 Budget Diary
 						- if (expense || bank)
 							p.smaller You can register an account to save your budget information.
 						- else
-							p.smaller You can skip this step for now if you don't already have an account.
+							p.smaller You can skip this step for now if you just want to see how this works.
 			form#signon
 				table.action
 					tbody
@@ -161,7 +161,7 @@ h1 Budget Diary
 							td
 								button.action(name="change", value="Update") Change
 							td
-								button.action(name="delete", value="Delete") Delete
+								button.action(name="delete", value="Confirm Delete") Delete
 								input(type="hidden", name="name",      value: expense.name)
 								input(type="hidden", name="type",      value: expense.type)
 								input(type="hidden", name="amount",    value: expense.amount)
@@ -231,7 +231,7 @@ h1 Budget Diary
 								td
 									button.action(name="change", value="Update") Change
 								td
-									button.action(name="delete", value="Delete") Delete
+									button.action(name="delete", value="Confirm Delete") Delete
 									input(type="hidden", name="name",      value: account.name)
 									input(type="hidden", name="balance",   value: account.balance)
 									input(type="hidden", name="date",      value: account.date)
