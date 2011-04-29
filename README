@@ -4,7 +4,7 @@ Summary: Tracks Bills, Income and lets you know how much money you have
 at any point in time.
 
 This product is a website that uses nodejs as a server, a browser as the
-client and mongodb to store the data. This project was started as a means to help me teach myself about these three technologies. As I was very sick when the project started it is likely that things will suck.
+client and mongodb to store the data. This project was started as a means to help me teach myself about these three technologies. As I was very sick when the project started it is likely that things will be immature.
 
 This is also a way I can get started using git and github.
 
@@ -14,7 +14,7 @@ User Requirements:
  1. To know how much money the user will have at any point in time.
  2. To know when bills will come up and need to be paid.
  3. To be able to make judgements about savings involving interest.
- 
+
 Technical:
 The user will be asked to enter:
 * Their current bank and cash balances
@@ -26,6 +26,7 @@ The user will be asked to enter:
 * Their income with the about details.
 * The interest rate on their credit card and how fees are calculated.
 
+Keywords (todo):
 Income and expenses will have Keywords associated with them. Each keyword can belong to a parent keyword. This is designed to be flexible to allow for searching and hierarchical sorting. Consider for example the following bills:
 
 Water {
@@ -58,7 +59,7 @@ Sometimes an expense or income will have additional keywords that will apply as 
 
 Food Shopping instance xxx {
    Dinner Party
-   Trivial 
+   Trivial
    not Important
 }
 
@@ -88,4 +89,7 @@ Delete:
 The user may get an "are you sure?" if it has dependant rows. Delete is available from the browse and view screens.
 
 Notes:
-This product will use a build and see methodology to encountering and addressing issues that arise. Any point of the specification may change at any time.
+This product will use a build and see methodology to encountering and addressing issues that arise. Any point of the specification may change accordingly.
+
+Criticisms:
+Having abcd of 'rows' is too simplistic for the problem at hand in cases of docs containing lists. For example a 'Savings' bank account will have different amounts on different dates (currently it only stores the most recent amount). Also an item will have multiple keywords and potentially diffent amounts on different dates. Therefore the currently employed abcd mechanism may be crippling these sorts of enhancements. It also looks pretty ugly having the details sitting on top of the catalog. We could certainly rethink the design of this layout.

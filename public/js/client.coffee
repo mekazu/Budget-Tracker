@@ -25,6 +25,11 @@ $(document).ready ->
 		for i in [2..3]
 			$("#totals tr td:nth-child(" + i + ")").toggle()
 
+	$(".hover").hover (e) ->
+		$(this).children().first().show()
+	, (e) ->
+		$(this).children().first().hide()
+
 	$("table.browse").tablesorter()
 
 	$(".date-picker").datepicker
@@ -69,8 +74,8 @@ submitForm = (form) ->
 		false
 
 ###
-Finds the hidden inputs of the change or delete buttons based on a convention
-of keeping the inputs in the last td of the catalog table.
+# Finds the hidden inputs of the change or delete buttons based on a convention
+# of keeping the inputs in the last td of the catalog table.
 ###
 findModifyActionHiddenInputs = (clicked) ->
 	# button.td.tr.allTds.lastTd.hiddenInputs
@@ -83,6 +88,7 @@ copyDataToAction = (data, clicked) ->
 	mergeAttributes data, $(":input", form)
 	log tbody = $("tbody", form).show()
 	$(":input", form).first().focus()
+	$(".register-box").hide() if data.group == 'signon'
 
 mapHidden = (data, hiddens) ->
 	hiddens.each (i, input) ->

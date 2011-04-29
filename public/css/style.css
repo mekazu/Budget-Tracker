@@ -16,6 +16,13 @@ div.body {
 	width: 800px;
 }
 
+.shadow {
+  -moz-box-shadow: rgba(0, 0, 0, 0.2) 0 5px 6px 0;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.2) 0 5px 6px 0;
+  -o-box-shadow: rgba(0, 0, 0, 0.2) 0 5px 6px 0;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 5px 6px 0;
+}
+
 div.box {
 	border-style: solid;
 	border-width: 3px;
@@ -51,6 +58,10 @@ table.browse th {
 	border-width: 0 0 3px 0;
 	border-style: solid;
 	border-color: white;
+}
+
+table.browse th.empty {
+	border-bottom: 0;
 }
 
 table.td {
@@ -135,12 +146,38 @@ div.expander {
 	color: red;
 }
 
+.positive {
+	color: black;
+}
+
 .float-right {
 	float: right;
 }
 
 .float-left {
 	float: left;
+}
+
+.hover div {
+	position: relative;
+}
+
+.hover div div {
+	background-color: white;
+	opacity: 0.8;
+	position: absolute;
+	left: 100px;
+	width: 400px;
+	top: -19px;
+}
+
+.hover div div div {
+	position: static;
+	text-align: left;
+}
+
+tr.historic td {
+	color: grey;
 }
 
 td.label {

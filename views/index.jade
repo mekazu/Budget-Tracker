@@ -10,7 +10,7 @@
 	| much money you will have in the future.
 
 h1 Budget Diary
-.box#signon
+.shadow.box#signon
 	a(name="signon")
 	dl
 		dt(name = "signon")
@@ -34,7 +34,7 @@ h1 Budget Diary
 						- else
 							p.smaller You can skip this step for now if you just want to see how this works.
 			form#signon
-				table.action
+				table.shadow.action
 					tbody
 						tr
 							td.label Username:
@@ -54,12 +54,12 @@ h1 Budget Diary
 									| Register New Account
 								input(name="submit", type="submit", value: autoRegister ? "Register" : "Sign On")
 			- if (signon)
-				table.browse(style: signon[0].anon ? "display:none;" : "")
+				table.shadow.browse(style: signon[0].anon ? "display:none;" : "")
 					thead
 						tr
 							th User
-							th
-							th
+							th.empty
+							th.empty
 					tbody
 						- signon.forEach(function(account) {
 							tr
@@ -74,7 +74,7 @@ h1 Budget Diary
 									input(type="hidden", name="id",        value: account._id)
 									input(type="hidden", name="group",     value: account.group)
 						- })
-.box#expense
+.box.shadow#expense
 	a(name="expense")
 	dl
 		dt(name = "expense")
@@ -92,7 +92,7 @@ h1 Budget Diary
 						p.smaller You can keep the amounts up-to-date by changing and deleting accounts in the table below.
 					- else
 			form#expense
-				table.action
+				table.shadow.action
 					tbody
 						tr
 							td.label Type:
@@ -138,7 +138,7 @@ h1 Budget Diary
 							td.final(colspan="2")
 								input(name="submit", type="submit", value="Save")
 			- if (expense)
-				table.browse
+				table.shadow.browse
 					thead
 						tr
 							th Name
@@ -146,13 +146,14 @@ h1 Budget Diary
 							th Amount
 							th Every
 							th From
-							th
-							th
+							th.empty
+							th.empty
 								button.action(name="add", value="Save") Add
 								input(type="hidden", name="group", value="expense")
 					tbody
+						- var today = new Date().getTime() / 1000;
 						- expense.forEach(function(expense) {
-						tr
+						tr(class: (expense.uptoEpoch && expense.uptoEpoch < today || expense.frequency == 'once' && expense.fromEpoch < today) && "historic")
 							td= expense.name
 							td= expense.type == "income" ? "Yes" : ""
 							td.numeric= expense.amount
@@ -174,7 +175,7 @@ h1 Budget Diary
 								input(type="hidden", name="group",     value: expense.group)
 						- })
 
-.box#bank
+.box.shadow#bank
 	a(name="bank")
 	dl
 		dt(name = "bank")
@@ -190,7 +191,7 @@ h1 Budget Diary
 					- if (bank)
 						p.smaller This doesn't just need to be bank accounts, you can also use cash and other assets.
 			form#bank
-				table.action
+				table.shadow.action
 					tbody
 						tr
 							td.label Description:
@@ -212,14 +213,14 @@ h1 Budget Diary
 							td.final(colspan="2")
 								input(name="submit", type="submit", value="Save")
 			- if (bank)
-				table.browse
+				table.shadow.browse
 					thead
 						tr
 							th Name
 							th Balance
 							th Date
-							th
-							th
+							th.empty
+							th.empty
 								button.action(name="add", value="Save") Add
 								input(type="hidden", name="group",     value="bank")
 					tbody
@@ -241,7 +242,7 @@ h1 Budget Diary
 						- })
 - if (totals)
 	a(name="totals")
-	.box#totals
+	.shadow.box#totals
 		dl
 			dt(name = "totals")
 				div.expander.float-left #{expander(prefs.style.totals)}
@@ -253,13 +254,12 @@ h1 Budget Diary
 					p.smaller The amounts are taken from when your bank balance was last updated.
 						|  Only payments after this date will be calculated.
 					p.smaller The balance is what you will have left once all payments have been made on that date.
-				table.browse
+				table.shadow.browse
 					thead
 						tr
 							th Date
 							th Balance
 							th Spent
-							th Items
 					tbody#totals
 						- var balanceClass = function(amount) {
 						-		return "numeric" + (amount < 0 ? " negative" : "");
@@ -268,12 +268,14 @@ h1 Budget Diary
 						tr
 							td.numeric.formattedDate #{total.date}
 							td(class= balanceClass(total.balance))= total.balance
-							td(class= balanceClass(total.payment))= total.payment
-							td
+							td.hover(class= balanceClass(total.payment * -1))= total.payment
 								- if (total.items) {
-									- total.items.forEach(function(item) {
-										#{item.occurances}x #{item.expense.name} #{item.expense.amount},
-									- });
+								div(style="display: none")
+									div
+										- total.items.forEach(function(item) {
+											div(class= item.expense.type == 'income' ? " positive" : " negative")
+												#{item.occurances}x #{item.expense.name} #{item.expense.amount}
+										- });
 								- };
 						- })
 - else log("No totals.")

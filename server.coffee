@@ -21,7 +21,7 @@ db = new Database("localhost", 27017, "budget").db
 indexCount = 0
 
 ###
-Web Server
+# Web Server
 ###
 app = express.createServer()
 app.configure ->
@@ -119,7 +119,7 @@ preferences = (req) ->
 app.listen(8743)
 
 ###
-Objects
+# Objects
 ###
 init = (obj, p, as) ->
 	property = obj[p]
@@ -137,8 +137,8 @@ delimit = (del, list) ->
 	str
 
 ###
-Validation
-Structure: {group: {field: {needs: needs}}}
+# Validation
+# Structure: {group: {field: {needs: needs}}}
 ###
 validation =
 	signon :
@@ -157,7 +157,7 @@ validation =
 		amount		: {name: "Amount",		 required: true, beFloat: true}
 		fromDate  : {name: "From Date"}
 		uptoDate  : {name: "Upto Date"}
-		fromEpoch : {name: "From Epoch", required: true,	 beInt: true}
+		fromEpoch : {name: "From Epoch", required: true,   beInt: true}
 		uptoEpoch : {name: "Upto Epoch",    beInt: true}
 		account   : {name: "Account",    required: false}
 		frequency : {name: "Frequency",  required: true}
@@ -188,7 +188,6 @@ validate = (prm, ses, callback) ->
 			return callback err if err
 			# Not sure if this is the 'right' way to get ObjectID string
 			prm.account = account._id.toString()
-			# huh?: prm.unique.account = prm.account
 			look prm, "New user with account: " + prm.account + " Revalidating prm: "
 			validate prm, ses, callback
 	else
@@ -242,7 +241,7 @@ signon = (p, ses, callback) ->
 			callback "Username password combination incorrect"
 
 ###
-Summary Logic
+# Summary Logic
 ###
 defineTotals = (locals) ->
 	currentBank = max(locals.bank, 'epoch')
@@ -373,7 +372,7 @@ negafy = (obj, negKey, negVal, amount) ->
 		amount
 
 ###
-Strings
+# Strings
 ###
 didFloat = (obj, property) ->
 	obj and property and obj[property] and makeFloat obj, property
@@ -398,7 +397,7 @@ makeInt = (obj, property) ->
 	ok
 
 ###
-Objects
+# Objects
 ###
 dislodge = (obj, property) ->
 	value = obj[property]
@@ -407,7 +406,7 @@ dislodge = (obj, property) ->
 
 
 ###
-Data
+# Data
 ###
 findOne = (key, table, callback) ->
 	look key, "Looking in " + table + " for: "
@@ -484,7 +483,7 @@ persist = (p, table, callback) ->
 			callback("Action: " + p.action + " not understood.");
 
 ###
-Debug
+# Debug
 ###
 log = util.log
 look = util.look
