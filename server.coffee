@@ -2,22 +2,19 @@
 express			= require('express')
 sys					= require('sys')
 dateUtils		= require('date-utils')
-util				= require('./server/util.js')
 mongodb			= require('mongodb')
+util				= require('./server/util')
+dao					= require('./server/dao')
+secret			= require('./server/secret')
 
 # Classes
 ObjectID = mongodb.BSONNative.ObjectID
-Database = (host, port, database) ->
-	this.db = new mongodb.Db(database, new mongodb.Server(host, port, {auto_reconnect: true}, {}))
-	this.db.open ->
-		log "MongoDB Connected"
 
 # Final
 MONEY 			= "money"
 USER				= "user"
 
 # Global
-db = new Database("localhost", 27017, "budget").db
 indexCount = 0
 
 ###
@@ -28,7 +25,7 @@ app.configure ->
 	app.use express.static(__dirname + '/public')
 	app.use express.bodyParser()
 	app.use express.cookieParser()
-	app.use express.session(secret: "Ci93kLKjvlk3l2jcXK3k")
+	app.use express.session(secret: secret.session)
 
 app.get '/', (req, res) ->
 	# Prefs are stored in session and relayed to locals
@@ -45,9 +42,9 @@ app.get '/', (req, res) ->
 	else
 		# User with something to display (not ses.account.anon or ses.account._id)
 		prefs.user = ses.account.user if ses.account.user # Registered User
-		list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
+		dao.list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
 			locals.bank = results
-			list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
+			dao.list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
 				locals.expense = results
 				defineTotals locals
 				log "Defined locals"
@@ -96,7 +93,7 @@ app.post "/balance", (req, res) ->
 			else if prm.group == "signoff"
 				doSignoff()
 			else
-				persist prm, MONEY, (err, docs) ->
+				dao.persist prm, MONEY, (err, docs) ->
 					log err if err
 					res.send(if err then "Data Error: " + err else '')
 
@@ -143,7 +140,7 @@ delimit = (del, list) ->
 validation =
 	signon :
 		user : {name: "Username", required: true}
-		pass : {name: "Password", required: true}
+		pass : {name: "Password", required: true, encrypt: true}
 		anon : {name: "Guest"}
 	bank :
 		name		: {name: "Name",		required: true}
@@ -177,6 +174,8 @@ typeCheck = (prm) ->
 					messages.push "The " + needs.name + " must be numeric"
 				else if needs.beInt and not makeInt prm, field
 					messages.push "The " + needs.name + " must be a whole number"
+				if needs.encrypt
+					prm[field] = util.encrypt prm[field]
 				prm.doc[field] = prm[field]
 	messages
 
@@ -207,7 +206,7 @@ validate = (prm, ses, callback) ->
 ###
 tempSignon = (ses, callback) ->
 	dirty = {doc: {anon: ses.account.anon}, action: 'add'}
-	persist dirty, USER, (err, docs) ->
+	dao.persist dirty, USER, (err, docs) ->
 		if err or docs.legnth < 1
 			callback "Sorry, there was a problem: " + (err or "nothing saved")
 		else
@@ -220,7 +219,7 @@ tempSignon = (ses, callback) ->
 ###
 signon = (p, ses, callback) ->
 	register = dislodge p, 'register'
-	findOne {user: p.user, pass: p.pass}, USER, (err, account) ->
+	dao.findOne {user: p.user, pass: p.pass}, USER, (err, account) ->
 		if account
 			ses.account = account;
 			ses.account.group = 'signon' #
@@ -230,7 +229,7 @@ signon = (p, ses, callback) ->
 				p._id = new ObjectID ses.account._id
 				p.key = {_id: p._id}
 			look p, "About to " + p.action + " registration for user:"
-			persist p, USER, (err, docs) ->
+			dao.persist p, USER, (err, docs) ->
 				if err || err instanceof Error
 					callback err
 				else if p.action == 'delete'
@@ -404,83 +403,6 @@ dislodge = (obj, property) ->
 	delete obj[property]
 	value
 
-
-###
-# Data
-###
-findOne = (key, table, callback) ->
-	look key, "Looking in " + table + " for: "
-	db.collection table, (err, c) ->
-		callback(err, c) if err instanceof Error
-		c.findOne key, (err, doc) ->
-			callback(err, doc)
-
-list = (key, table, callback) ->
-	db.collection table, (err, c) ->
-		callback(err, c) if err instanceof Error
-		c.find key, (err, cursor) ->
-			callback(err, cursor) if err instanceof Error
-			cursor.toArray (err, array) ->
-				callback(err, array)
-
-ensureUnique = (connection, qualifier, callback) ->
-	if qualifier
-		look qualifier, "Qualifier: "
-		connection.count [qualifier], (err, count) ->
-			callback(err, count)
-	else
-		callback(null, 0)
-
-persist = (p, table, callback) ->
-	look p.doc, "About to " + p.action + " in " + table + ":"
-	look p.key, "Key used to determine which doc to " + p.action + ":"
-	look p.unique, "Will not update if this (unique search) exists:"
-	final = (err, docs) ->
-		if err
-			look err, "Error in Persisting:"
-			look p, "Failed to save:"
-		else
-			look docs, "Saved:"
-		callback(err, docs) if callback
-	db.collection table, (err, c) ->
-		callback(err.message) if err instanceof Error
-		if p.action == 'add'
-			ensureUnique c, p.unique, (err, count) ->
-				if err instanceof Error
-					callback err.message
-				else if count < 1
-					c.insert [p.doc], final
-				else
-					callback "Found " + count + " duplicate key on insert"
-		else if p.action == 'change'
-			look p.key, "Type of key: " + typeof p.key
-			look p.key.id, "Type of id: " + (typeof p.key.id) if p.key.id
-			c.findOne p.key, (err, doc) ->
-				if look doc, "Before Update:"
-					ensureUnique c, p.unique, (err, count) ->
-						if err instanceof Error
-							callback err.message
-						if count < 1
-							c.update p.key, p.doc, {safe: true}, final
-						else
-							callback "Found " + count + " duplicate key on insert"
-				else
-					callback("Could not find the doc to update", null);
-		else if p.action == 'replace'
-			c.findOne p.key, (err, doc) ->
-				if look doc, "Before Replace:"
-					p.doc._id = doc._id
-					c.update p.key, p.doc, {safe: true}, final
-				else
-					callback("Could not find the doc to update", null);
-		else if p.action == 'delete'
-			c.findOne p.key, (err, doc) ->
-				if look doc, "Before delete"
-					c.remove doc, {safe: true}, final
-				else
-					callback("Could not find the doc to delete", null);
-		else
-			callback("Action: " + p.action + " not understood.");
 
 ###
 # Debug

@@ -89,6 +89,7 @@ copyDataToAction = (data, clicked) ->
 	log tbody = $("tbody", form).show()
 	$(":input", form).first().focus()
 	$(".register-box").hide() if data.group == 'signon'
+	$("input#register").attr('checked', true)
 
 mapHidden = (data, hiddens) ->
 	hiddens.each (i, input) ->
