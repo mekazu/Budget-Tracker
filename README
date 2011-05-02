@@ -101,3 +101,4 @@ Other TODOs:
  * Create a greyscale style.css and investigate better fonts
  * Make the summary dates clearer - perhaps fold in weeks and months - consider a calendar view & graphs.
  * Write a migration utility to re-encrypt user passwords with a new key
+ * Make responses dynamic table updates rather than requests - possibly load all data dynamically
