@@ -93,6 +93,7 @@ Criticisms:
 Having abcd of 'rows' is too simplistic for the problem at hand in cases of docs containing lists. For example a 'Savings' bank account will have different amounts on different dates (currently it only stores the most recent amount). Also an item will have multiple keywords and potentially diffent amounts on different dates. Therefore the currently employed abcd mechanism may be crippling these sorts of enhancements. It also looks pretty ugly having the details sitting on top of the catalog. We could certainly rethink the design of this layout.
 
 Other TODOs:
+ * Tidy the unregister user count by taking the max from the user table
  * Calculate interest rates
  * Allow users to enter an amount range and a payment date range to allow for more general calculations
  * Allow unknown expenses in the distant future to be easily replaced with known expenses
