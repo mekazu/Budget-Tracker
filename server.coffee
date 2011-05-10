@@ -243,8 +243,7 @@ signon = (p, ses, callback) ->
 # Summary Logic
 ###
 defineTotals = (locals) ->
-	currentBank = max(locals.bank, 'epoch')
-	if currentBank
+	if currentBank = max(locals.bank, 'epoch')
 		after = dateOf currentBank.epoch;
 		bank = balance: sum locals.bank, 'balance'
 		locals.totals = [bank]

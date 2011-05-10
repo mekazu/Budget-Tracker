@@ -1,7 +1,6 @@
 Welcome to Budget Tracker
 
-Summary: Tracks Bills, Income and lets you know how much money you have
-at any point in time.
+Summary: Tracks Bills & Income and lets you know how much money you have at any point in time.
 
 This product is a website that uses nodejs as a server, a browser as the
 client and mongodb to store the data. This project was started as a means to help me teach myself about these technologies. This is also a way I can get started using git and github.
@@ -21,8 +20,8 @@ The user will be asked to enter:
    * Due date
    * Frequences (Every week, fortnight, 4 weeks, month, quarter, half or year)
    * When (and if) the bill will 'dry up' or not need to be paid again.
-* Their income with the about details.
-* The interest rate on their credit card and how fees are calculated.
+* Their income with the same details.
+* The interest rate on their credit card and how fees are calculated (todo).
 
 Keywords (todo):
 Income and expenses will have Keywords associated with them. Each keyword can belong to a parent keyword. This is designed to be flexible to allow for searching and hierarchical sorting. Consider for example the following bills:
@@ -65,8 +64,7 @@ Food Shopping instance xxx {
 Usability:
 The product will make high use of javascript, ajax and json to make it fast and to allow the user to see changes instantly and mostly everything on the same page.
 
-At first there will be no entries for a new user so we need an
-Add Browse Change Delete (ABCD) mechanism for
+At first there will be no entries for a new user so we need an Add Browse Change Delete (ABCD) mechanism for
   * bank balances
   * income and expenses
   * keywords
