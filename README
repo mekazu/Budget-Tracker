@@ -1,12 +1,9 @@
 Welcome to Budget Tracker
 
-Summary: Tracks Bills, Income and lets you know how much money you have
-at any point in time.
+Summary: Tracks Bills & Income and lets you know how much money you have at any point in time.
 
 This product is a website that uses nodejs as a server, a browser as the
-client and mongodb to store the data. This project was started as a means to help me teach myself about these three technologies. As I was very sick when the project started it is likely that things will be immature.
-
-This is also a way I can get started using git and github.
+client and mongodb to store the data. This project was started as a means to help me teach myself about these three technologies. This is also a way I can get started using git and github.
 
 User Requirements:
  * The user is typically a single user or a couple who want to keep track of simple day to day expenses such as mortgage, bills, expenses and have a regular income.
@@ -23,8 +20,8 @@ The user will be asked to enter:
    * Due date
    * Frequences (Every week, fortnight, 4 weeks, month, quarter, half or year)
    * When (and if) the bill will 'dry up' or not need to be paid again.
-* Their income with the about details.
-* The interest rate on their credit card and how fees are calculated.
+* Their income with the same details.
+* The interest rate on their credit card and how fees are calculated (todo).
 
 Keywords (todo):
 Income and expenses will have Keywords associated with them. Each keyword can belong to a parent keyword. This is designed to be flexible to allow for searching and hierarchical sorting. Consider for example the following bills:
@@ -67,8 +64,7 @@ Food Shopping instance xxx {
 Usability:
 The product will make high use of javascript, ajax and json to make it fast and to allow the user to see changes instantly and mostly everything on the same page.
 
-At first there will be no entries for a new user so we need an
-Add Browse Change Delete (ABCD) mechanism for
+At first there will be no entries for a new user so we need an Add Browse Change Delete (ABCD) mechanism for
   * bank balances
   * income and expenses
   * keywords
@@ -93,3 +89,15 @@ This product will use a build and see methodology to encountering and addressing
 
 Criticisms:
 Having abcd of 'rows' is too simplistic for the problem at hand in cases of docs containing lists. For example a 'Savings' bank account will have different amounts on different dates (currently it only stores the most recent amount). Also an item will have multiple keywords and potentially diffent amounts on different dates. Therefore the currently employed abcd mechanism may be crippling these sorts of enhancements. It also looks pretty ugly having the details sitting on top of the catalog. We could certainly rethink the design of this layout.
+
+Other TODOs:
+ * Tidy the unregister user count by taking the max from the user table
+ * Calculate interest rates
+ * Allow users to enter an amount range and a payment date range to allow for more general calculations
+ * Allow unknown expenses in the distant future to be easily replaced with known expenses
+ * Tidy UI by folding help away and the details table when not used (see above)
+ * Allow history data for bank accounts for summary comparison.
+ * Create a greyscale style.css and investigate better fonts
+ * Make the summary dates clearer - perhaps fold in weeks and months - consider a calendar view & graphs.
+ * Write a migration utility to re-encrypt user passwords with a new key
+ * Make responses dynamic table updates rather than requests - possibly load all data dynamically
