@@ -31,71 +31,80 @@ app.get '/', (req, res) ->
 	# Prefs are stored in session and relayed to locals
 	prefs = preferences req
 	ses = req.session
-	initSession ses, prefs
-	locals = {prefs: prefs, log: log, signon: [ses.account]}
-	render = ->
-		res.render 'index.jade', {title: "Budget Diary", locals: locals}
-	if ses.account.anon and not ses.account._id
-		# Unregistered user who hasn't done anything yet
-		prefs.anon = ses.account.anon
-		render()
-	else
-		# User with something to display (not ses.account.anon or ses.account._id)
-		prefs.user = ses.account.user if ses.account.user # Registered User
-		dao.list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
-			locals.bank = results
-			dao.list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
-				locals.expense = results
-				defineTotals locals
-				log "Defined locals"
-				render()
+	initSession ses, prefs, ->
+		locals = {prefs: prefs, log: log, signon: [ses.account]}
+		render = ->
+			res.render 'index.jade', {title: "Budget Diary", locals: locals}
+		if ses.account.anon and not ses.account._id
+			# Unregistered user who hasn't done anything yet
+			prefs.anon = ses.account.anon
+			render()
+		else
+			# User with something to display (not ses.account.anon or ses.account._id)
+			prefs.user = ses.account.user if ses.account.user # Registered User
+			dao.list {group: 'bank', account: ses.account._id}, MONEY, (err, results) ->
+				locals.bank = results
+				dao.list {group: 'expense', account: ses.account._id}, MONEY, (err, results) ->
+					locals.expense = results
+					defineTotals locals
+					log "Defined locals"
+					render()
 
-initSession = (ses, prefs) ->
-	if not ses.account
-		# New sesion: set anon to session and continue
+initSession = (ses, prefs, callback) ->
+	initAccount = ->
 		ses.account = anon: ++indexCount, group: 'signon'
 		prefs.autofocus = 'signon'
 		log "New user: " + ses.account.anon
-	look ses.account, "Session Account:"
+		callback()
+	if not ses.account
+		# New sesion: set anon to session and continue
+		if indexCount == 0
+			dao.max 'anon', USER, (err, max) ->
+				indexCount = max.anon if max.anon
+				initAccount()
+		else
+			initAccount()
+	else
+		callback()
 
 app.post "/balance", (req, res) ->
 	prefs = preferences req
 	ses = req.session
-	initSession(ses, prefs)
-	look p = req.body, "The form sent to balance:"
-	# If not insert the form sends an id that we convert to an ObjectID and set to p.key
-	look (p.key = _id : new ObjectID p.id), "Key definition:" if p.id
-	doSignoff = ->
-		prefs.autofocus = "signon"
-		ses.destroy()
-		res.send('')
-	if ses.account
-		p.account = ses.account._id
-	validate p, ses, (err, prm) ->
-		if err
-			res.send("Validation Error: " + log err)
-		else
-			prefs.autofocus = prm.group
-			if prm.group == 'signon'
-				signon prm, ses, (err, user) ->
-					if err
-						err = "Signon Error: " + err
-						res.send(err)
-					else if p.action == 'delete'
-						doSignoff()
-					else
-						visible prefs, false, 'signon'
-						visible prefs, true, 'bank'
-						visible prefs, true, 'expense'
-						visible prefs, true, 'totals'
-						prefs.autofocus = 'expense'
-						res.send('')
-			else if prm.group == "signoff"
-				doSignoff()
+	initSession ses, prefs, ->
+		look p = req.body, "The form sent to balance:"
+		# If not insert the form sends an id that we convert to an ObjectID and set to p.key
+		look (p.key = _id : new ObjectID p.id), "Key definition:" if p.id
+		doSignoff = ->
+			prefs.autofocus = "signon"
+			ses.destroy()
+			res.send('')
+		if ses.account
+			p.account = ses.account._id
+		validate p, ses, (err, prm) ->
+			if err
+				res.send("Validation Error: " + log err)
 			else
-				dao.persist prm, MONEY, (err, docs) ->
-					log err if err
-					res.send(if err then "Data Error: " + err else '')
+				prefs.autofocus = prm.group
+				if prm.group == 'signon'
+					signon prm, ses, (err, user) ->
+						if err
+							err = "Signon Error: " + err
+							res.send(err)
+						else if p.action == 'delete'
+							doSignoff()
+						else
+							visible prefs, false, 'signon'
+							visible prefs, true, 'bank'
+							visible prefs, true, 'expense'
+							visible prefs, true, 'totals'
+							prefs.autofocus = 'expense'
+							res.send('')
+				else if prm.group == "signoff"
+					doSignoff()
+				else
+					dao.persist prm, MONEY, (err, docs) ->
+						log err if err
+						res.send(if err then "Data Error: " + err else '')
 
 app.post "/toggle", (req, res) ->
 	p = req.body

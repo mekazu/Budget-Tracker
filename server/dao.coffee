@@ -27,6 +27,19 @@ list = (key, table, callback) ->
 			cursor.toArray (err, array) ->
 				callback(err, array)
 
+max = (field, table, callback) ->
+	db.collection table, (err, c) ->
+		callback(err, c) if err instanceof Error
+		search = {}
+		search[field] = '$gt': -1
+		options =
+			limit: 1
+			sort: [[field, 'desc']]
+		c.find search, options, (err, cursor) ->
+			cursor.toArray (err, array) ->
+				found = if array.length > 0 then array[0] else null
+				callback err, found
+
 ensureUnique = (connection, qualifier, callback) ->
 	if qualifier
 		look qualifier, "Qualifier: "
@@ -96,4 +109,5 @@ exports.findOne      = findOne
 exports.list         = list
 exports.ensureUnique = ensureUnique
 exports.persist      = persist
+exports.max					 = max
 
